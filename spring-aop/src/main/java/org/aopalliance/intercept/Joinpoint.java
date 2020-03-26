@@ -34,7 +34,7 @@ import java.lang.reflect.AccessibleObject;
  * joinpoint. It is passed to the interceptors that are installed on
  * the static joinpoint.
  *
- * @author Rod Johnson
+ * @author Rod Johnson     连接点
  * @see Interceptor
  */
 public interface Joinpoint {
@@ -45,6 +45,8 @@ public interface Joinpoint {
 	 * on the actual joinpoint type (see the children interfaces).
 	 * @return see the children interfaces' proceed definition
 	 * @throws Throwable if the joinpoint throws an exception
+	 *
+	 * 继续执行链中的下一个拦截器
 	 */
 	Object proceed() throws Throwable;
 

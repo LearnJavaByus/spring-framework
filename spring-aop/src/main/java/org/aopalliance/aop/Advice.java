@@ -22,6 +22,9 @@ package org.aopalliance.aop;
  *
  * @author Rod Johnson
  * @version $Id: Advice.java,v 1.1 2004/03/19 17:02:16 johnsonr Exp $
+ *
+ * 通知
+ *
  */
 public interface Advice {
 

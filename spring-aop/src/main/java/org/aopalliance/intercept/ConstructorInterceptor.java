@@ -39,7 +39,7 @@ package org.aopalliance.intercept;
  * }
  * </pre>
  *
- * @author Rod Johnson
+ * @author Rod Johnson   构造器拦截器
  */
 public interface ConstructorInterceptor extends Interceptor  {
 

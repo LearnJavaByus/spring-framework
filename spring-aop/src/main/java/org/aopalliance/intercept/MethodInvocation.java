@@ -25,7 +25,7 @@ import java.lang.reflect.Method;
  * <p>A method invocation is a joinpoint and can be intercepted by a
  * method interceptor.
  *
- * @author Rod Johnson
+ * @author Rod Johnson    方法调用
  * @see MethodInterceptor
  */
 public interface MethodInvocation extends Invocation {

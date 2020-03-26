@@ -22,7 +22,7 @@ package org.aopalliance.intercept;
  * <p>An invocation is a joinpoint and can be intercepted by an
  * interceptor.
  *
- * @author Rod Johnson
+ * @author Rod Johnson       调用
  */
 public interface Invocation extends Joinpoint {
 
