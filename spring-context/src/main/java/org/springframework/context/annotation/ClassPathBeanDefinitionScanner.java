@@ -270,24 +270,32 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 */
 	protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
+		//创建bean定义的holder对象用于保存扫描后生成的bean定义对象
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
+		//循环我们的包路径集合
 		for (String basePackage : basePackages) {
+			//找到候选的@Component
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
+				//设置我们的beanName
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+				//处理@AutoWired相关的
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
+				//处理jsr250相关的组件
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+				//把我们解析出来的组件bean定义注册到Spring IoC容器中
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+					//注册到Spring IoC容器中
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}

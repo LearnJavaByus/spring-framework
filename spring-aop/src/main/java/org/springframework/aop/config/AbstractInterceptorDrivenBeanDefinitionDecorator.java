@@ -64,6 +64,7 @@ public abstract class AbstractInterceptorDrivenBeanDefinitionDecorator implement
 		BeanDefinitionRegistry registry = parserContext.getRegistry();
 
 		// get the root bean name - will be the name of the generated proxy factory bean
+		// 获取首节点bean名称，将是生成的代理工厂bean的名称
 		String existingBeanName = definitionHolder.getBeanName();
 		BeanDefinition targetDefinition = definitionHolder.getBeanDefinition();
 		BeanDefinitionHolder targetHolder = new BeanDefinitionHolder(targetDefinition, existingBeanName + ".TARGET");
@@ -71,7 +72,7 @@ public abstract class AbstractInterceptorDrivenBeanDefinitionDecorator implement
 		// delegate to subclass for interceptor definition
 		BeanDefinition interceptorDefinition = createInterceptorDefinition(node);
 
-		// generate name and register the interceptor
+		// generate name and register the interceptor 生产名称并注册拦截器
 		String interceptorName = existingBeanName + '.' + getInterceptorNameSuffix(interceptorDefinition);
 		BeanDefinitionReaderUtils.registerBeanDefinition(
 				new BeanDefinitionHolder(interceptorDefinition, interceptorName), registry);
@@ -79,24 +80,24 @@ public abstract class AbstractInterceptorDrivenBeanDefinitionDecorator implement
 		BeanDefinitionHolder result = definitionHolder;
 
 		if (!isProxyFactoryBeanDefinition(targetDefinition)) {
-			// create the proxy definition
+			// create the proxy definition  创建代理定义
 			RootBeanDefinition proxyDefinition = new RootBeanDefinition();
-			// create proxy factory bean definition
+			// create proxy factory bean definition 创建代理工厂bean定义
 			proxyDefinition.setBeanClass(ProxyFactoryBean.class);
 			proxyDefinition.setScope(targetDefinition.getScope());
 			proxyDefinition.setLazyInit(targetDefinition.isLazyInit());
-			// set the target
+			// set the target 设置目标
 			proxyDefinition.setDecoratedDefinition(targetHolder);
 			proxyDefinition.getPropertyValues().add("target", targetHolder);
-			// create the interceptor names list
+			// create the interceptor names list 创建拦截器名称数组
 			proxyDefinition.getPropertyValues().add("interceptorNames", new ManagedList<String>());
-			// copy autowire settings from original bean definition.
+			// copy autowire settings from original bean definition. 从原来的bean定义中复制自动注入配置
 			proxyDefinition.setAutowireCandidate(targetDefinition.isAutowireCandidate());
 			proxyDefinition.setPrimary(targetDefinition.isPrimary());
 			if (targetDefinition instanceof AbstractBeanDefinition) {
 				proxyDefinition.copyQualifiersFrom((AbstractBeanDefinition) targetDefinition);
 			}
-			// wrap it in a BeanDefinitionHolder with bean name
+			// wrap it in a BeanDefinitionHolder with bean name 用名称包装BeanDefinitionHolder
 			result = new BeanDefinitionHolder(proxyDefinition, existingBeanName);
 		}
 
