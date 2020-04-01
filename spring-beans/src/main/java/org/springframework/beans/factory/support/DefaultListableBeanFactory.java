@@ -823,6 +823,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		// Trigger initialization of all non-lazy singleton beans...
 		//遍历beanNames，触发所有非懒加载单例bean的初始化
 		for (String beanName : beanNames) {
+			// 这里根据bean名称获取MergedBeanDefinition，结果类型是RootBeanDefinition
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
 			//Bean实例：不是抽象类 && 是单例 && 不是懒加载
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
