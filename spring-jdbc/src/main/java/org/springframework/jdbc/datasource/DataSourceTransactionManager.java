@@ -328,6 +328,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 
 	@Override
 	protected void doResume(@Nullable Object transaction, Object suspendedResources) {
+		// 绑定线程
 		TransactionSynchronizationManager.bindResource(obtainDataSource(), suspendedResources);
 	}
 
@@ -347,14 +348,20 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 		}
 	}
 
+	/**
+	 * 新事务的回滚
+	 * @param status the status representation of the transaction
+	 */
 	@Override
 	protected void doRollback(DefaultTransactionStatus status) {
+		//获取当前线程的数据库连接并调用其rollback方法进行回滚，使用的是底层数据库连接提供的API
 		DataSourceTransactionObject txObject = (DataSourceTransactionObject) status.getTransaction();
 		Connection con = txObject.getConnectionHolder().getConnection();
 		if (status.isDebug()) {
 			logger.debug("Rolling back JDBC transaction on Connection [" + con + "]");
 		}
 		try {
+			// 当前数据库连接的回滚方法
 			con.rollback();
 		}
 		catch (SQLException ex) {
@@ -378,17 +385,18 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 
 		// Remove the connection holder from the thread, if exposed.
 		if (txObject.isNewConnectionHolder()) {
-			//从TransactionSynchronizationManager中解绑相应的connectionHolder
+			//从TransactionSynchronizationManager中解绑相应的connectionHolder ，将数据库连接从当前线程中解除绑定
 			TransactionSynchronizationManager.unbindResource(obtainDataSource());
 		}
 
-		// Reset connection.
+		// Reset connection. 重启连接
 		Connection con = txObject.getConnectionHolder().getConnection();
 		try {
 			if (txObject.isMustRestoreAutoCommit()) {
-				//对获取到的Connection进行一些还原
+				//对获取到的Connection进行一些还原，恢复数据库连接的autoCommit状态
 				con.setAutoCommit(true);
 			}
+			// 重置数据库连接信息，包括隔离级别、readOnly属性等
 			DataSourceUtils.resetConnectionAfterTransaction(con, txObject.getPreviousIsolationLevel());
 		}
 		catch (Throwable ex) {
@@ -399,7 +407,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 			if (logger.isDebugEnabled()) {
 				logger.debug("Releasing JDBC Connection [" + con + "] after transaction");
 			}
-			//对获取到的Connection进行一些还原
+			//重置数据库连接信息，包括隔离级别、readOnly属性等
 			DataSourceUtils.releaseConnection(con, this.dataSource);
 		}
 		//这里将这只transactionActive为false

@@ -807,12 +807,14 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 */
 	@Override
 	public final void rollback(TransactionStatus status) throws TransactionException {
+		// 如果事务状态已经是完成，回滚会抛出异常
 		if (status.isCompleted()) {
 			throw new IllegalTransactionStateException(
 					"Transaction is already completed - do not call commit or rollback more than once per transaction");
 		}
 
 		DefaultTransactionStatus defStatus = (DefaultTransactionStatus) status;
+		/* 执行回滚 */
 		processRollback(defStatus, false);
 	}
 
@@ -827,18 +829,21 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			boolean unexpectedRollback = unexpected;
 
 			try {
+				// 激活所有TransactionSynchronization中对应的方法
 				triggerBeforeCompletion(status);
 
 				if (status.hasSavepoint()) {
 					if (status.isDebug()) {
 						logger.debug("Rolling back transaction to savepoint");
 					}
+					/* 如果有保存点，也就是当前事务为单独的线程则会退到保存点 */
 					status.rollbackToHeldSavepoint();
 				}
 				else if (status.isNewTransaction()) {
 					if (status.isDebug()) {
 						logger.debug("Initiating transaction rollback");
 					}
+					/* 如果是新事务直接回滚 */
 					doRollback(status);
 				}
 				else {
@@ -848,6 +853,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 							if (status.isDebug()) {
 								logger.debug("Participating transaction failed - marking existing transaction as rollback-only");
 							}
+							// 如果当前事务不是独立的事务，则只能等待事务链执行完成之后再做回滚操作
 							doSetRollbackOnly(status);
 						}
 						else {
@@ -879,6 +885,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			}
 		}
 		finally {
+			/* 清理并恢复挂起的事务 */
 			cleanupAfterCompletion(status);
 		}
 	}
@@ -1003,13 +1010,14 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 * @see #doCleanupAfterCompletion
 	 */
 	private void cleanupAfterCompletion(DefaultTransactionStatus status) {
+		// 将当前事务状态设置为完成
 		status.setCompleted();
 		if (status.isNewSynchronization()) {
-			//TransactionSynchronizationManager清理工作
+			//TransactionSynchronizationManager清理工作  ，清空当前事务信息
 			TransactionSynchronizationManager.clear();
 		}
 		if (status.isNewTransaction()) {
-			//这个比较重要(重点分析)
+			//这个比较重要(重点分析) ，  新事务在事务完成之后做清理操作
 			doCleanupAfterCompletion(status.getTransaction());
 		}
 		if (status.getSuspendedResources() != null) {
@@ -1017,6 +1025,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				logger.debug("Resuming suspended transaction after completion of inner transaction");
 			}
 			Object transaction = (status.hasTransaction() ? status.getTransaction() : null);
+			/* 将原事务从挂起状态恢复 */
 			resume(transaction, (SuspendedResourcesHolder) status.getSuspendedResources());
 		}
 	}
