@@ -340,7 +340,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 			logger.debug("Committing JDBC transaction on Connection [" + con + "]");
 		}
 		try {
-			//其实也就是调用了Connection的commit()方法。
+			//调用数据库连接底层API的commit方法
 			con.commit();
 		}
 		catch (SQLException ex) {
@@ -361,7 +361,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 			logger.debug("Rolling back JDBC transaction on Connection [" + con + "]");
 		}
 		try {
-			// 当前数据库连接的回滚方法
+			// 调用数据库的回滚的API 进行回滚
 			con.rollback();
 		}
 		catch (SQLException ex) {

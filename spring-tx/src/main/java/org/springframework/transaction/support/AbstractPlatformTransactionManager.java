@@ -693,28 +693,32 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 */
 	@Override
 	public final void commit(TransactionStatus status) throws TransactionException {
+		// 判断此事务是否已完成，即是否已提交或已回滚。
 		if (status.isCompleted()) {
 			throw new IllegalTransactionStateException(
 					"Transaction is already completed - do not call commit or rollback more than once per transaction");
 		}
 
 		DefaultTransactionStatus defStatus = (DefaultTransactionStatus) status;
+		// 判断此事务的回滚标志
 		if (defStatus.isLocalRollbackOnly()) {
 			if (defStatus.isDebug()) {
 				logger.debug("Transactional code has requested rollback");
 			}
+			// 回滚操作
 			processRollback(defStatus, false);
 			return;
 		}
-
+		//shouldCommitOnGlobalRollbackOnly()默认返回false，isGlobalRollbackOnly是在嵌入事务回滚的时候赋值的
 		if (!shouldCommitOnGlobalRollbackOnly() && defStatus.isGlobalRollbackOnly()) {
 			if (defStatus.isDebug()) {
 				logger.debug("Global transaction is marked as rollback-only but transactional code requested commit");
 			}
+			// 回滚操作
 			processRollback(defStatus, true);
 			return;
 		}
-
+		/* 提交操作 */
 		processCommit(defStatus);
 	}
 
@@ -730,25 +734,33 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 
 			try {
 				boolean unexpectedRollback = false;
+				// 预提交(扩展)
 				prepareForCommit(status);
+				// 触发triggerBeforeCommit
 				triggerBeforeCommit(status);
+				//触发triggerBeforeCompletion
 				triggerBeforeCompletion(status);
 				beforeCompletionInvoked = true;
 
+				//判断此事务是否在内部携带保存点，即是否已基于保存点将其创建为嵌套事务
 				if (status.hasSavepoint()) {
 					if (status.isDebug()) {
 						logger.debug("Releasing transaction savepoint");
 					}
 					unexpectedRollback = status.isGlobalRollbackOnly();
+					// 释放保存点信息
 					status.releaseHeldSavepoint();
 				}
+				// 判断是否是新事务
 				else if (status.isNewTransaction()) {
 					if (status.isDebug()) {
 						logger.debug("Initiating transaction commit");
 					}
 					unexpectedRollback = status.isGlobalRollbackOnly();
+					/* 独立事务则提交 */
 					doCommit(status);
 				}
+				// 判断在事务全局标记为仅回滚的情况下是否提前失败。
 				else if (isFailEarlyOnGlobalRollbackOnly()) {
 					unexpectedRollback = status.isGlobalRollbackOnly();
 				}
@@ -768,6 +780,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			catch (TransactionException ex) {
 				// can only be caused by doCommit
 				if (isRollbackOnCommitFailure()) {
+					// 提交异常则回滚
 					doRollbackOnCommitException(status, ex);
 				}
 				else {
@@ -779,6 +792,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				if (!beforeCompletionInvoked) {
 					triggerBeforeCompletion(status);
 				}
+				// 提交异常则回滚
 				doRollbackOnCommitException(status, ex);
 				throw ex;
 			}
@@ -794,6 +808,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 
 		}
 		finally {
+			// 清理事务信息
 			cleanupAfterCompletion(status);
 		}
 	}
@@ -848,6 +863,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				}
 				else {
 					// Participating in larger transaction
+					// 判断是否有事务操作
 					if (status.hasTransaction()) {
 						if (status.isLocalRollbackOnly() || isGlobalRollbackOnParticipationFailure()) {
 							if (status.isDebug()) {
