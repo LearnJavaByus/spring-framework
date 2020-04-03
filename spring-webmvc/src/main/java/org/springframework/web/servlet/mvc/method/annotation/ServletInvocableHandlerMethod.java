@@ -101,8 +101,9 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 	 */
 	public void invokeAndHandle(ServletWebRequest webRequest, ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
-
+		// 这里的调用过程在分析Model的初始化时已经分析过，不再重复
 		Object returnValue = invokeForRequest(webRequest, mavContainer, providedArgs);
+		// 根据@ResponseStatus注解的内容设置响应状态，@ResponseStatus注解是用来设置响应状态码和错误提示信息给出提示的
 		setResponseStatus(webRequest);
 
 		if (returnValue == null) {
@@ -120,6 +121,7 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 		mavContainer.setRequestHandled(false);
 		Assert.state(this.returnValueHandlers != null, "No return value handlers");
 		try {
+			/* 处理返回值 */
 			this.returnValueHandlers.handleReturnValue(
 					returnValue, getReturnValueType(returnValue), mavContainer, webRequest);
 		}

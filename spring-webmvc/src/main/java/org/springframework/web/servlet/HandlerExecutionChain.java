@@ -134,7 +134,9 @@ public class HandlerExecutionChain {
 		if (!ObjectUtils.isEmpty(interceptors)) {
 			for (int i = 0; i < interceptors.length; i++) {
 				HandlerInterceptor interceptor = interceptors[i];
+				// 遍历拦截器调用preHandle方法
 				if (!interceptor.preHandle(request, response, this.handler)) {
+					// 如果有没通过的，遍历拦截器调用afterCompletion方法
 					triggerAfterCompletion(request, response, null);
 					return false;
 				}
@@ -154,6 +156,7 @@ public class HandlerExecutionChain {
 		if (!ObjectUtils.isEmpty(interceptors)) {
 			for (int i = interceptors.length - 1; i >= 0; i--) {
 				HandlerInterceptor interceptor = interceptors[i];
+				// 调用拦截器的postHandle方法
 				interceptor.postHandle(request, response, this.handler, mv);
 			}
 		}

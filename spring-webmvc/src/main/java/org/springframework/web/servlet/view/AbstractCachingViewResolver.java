@@ -147,9 +147,10 @@ public abstract class AbstractCachingViewResolver extends WebApplicationObjectSu
 	@Nullable
 	public View resolveViewName(String viewName, Locale locale) throws Exception {
 		if (!isCache()) {
+			/* 没有缓存直接创建视图 */
 			return createView(viewName, locale);
 		}
-		else {
+		else {// 尝试从缓存中获取
 			Object cacheKey = getCacheKey(viewName, locale);
 			View view = this.viewAccessCache.get(cacheKey);
 			if (view == null) {
@@ -157,6 +158,7 @@ public abstract class AbstractCachingViewResolver extends WebApplicationObjectSu
 					view = this.viewCreationCache.get(cacheKey);
 					if (view == null) {
 						// Ask the subclass to create the View object.
+						// 缓存中没有获取到同样要创建
 						view = createView(viewName, locale);
 						if (view == null && this.cacheUnresolved) {
 							view = UNRESOLVED_VIEW;
@@ -248,6 +250,7 @@ public abstract class AbstractCachingViewResolver extends WebApplicationObjectSu
 	 */
 	@Nullable
 	protected View createView(String viewName, Locale locale) throws Exception {
+		/* 加载视图 */
 		return loadView(viewName, locale);
 	}
 

@@ -998,22 +998,26 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	 */
 	protected final void processRequest(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-
+		// 记录请求处理开始时间
 		long startTime = System.currentTimeMillis();
 		Throwable failureCause = null;
-
+		// 提取当前线程的LocaleContext
 		LocaleContext previousLocaleContext = LocaleContextHolder.getLocaleContext();
+		// 构建国际化语言环境
 		LocaleContext localeContext = buildLocaleContext(request);
-
+		// 提取当前线程的RequestAttributes
 		RequestAttributes previousAttributes = RequestContextHolder.getRequestAttributes();
+		// 封装请求参数
 		ServletRequestAttributes requestAttributes = buildRequestAttributes(request, response, previousAttributes);
-
+		// 构建异步请求管理器，异步请求是Spring3.2版本的新特性
 		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+		// 注册Callable拦截器
 		asyncManager.registerCallableInterceptor(FrameworkServlet.class.getName(), new RequestBindingInterceptor());
-
+		// 保存到当前线程，保证当前线程的请求还能获取到
 		initContextHolders(request, localeContext, requestAttributes);
 
 		try {
+			/* 子类具体实现处理请求逻辑 */
 			doService(request, response);
 		}
 		catch (ServletException | IOException ex) {
@@ -1031,6 +1035,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 				requestAttributes.requestCompleted();
 			}
 			logResult(request, response, failureCause, asyncManager);
+			// 发布事件通知
 			publishRequestHandledEvent(request, response, startTime, failureCause);
 		}
 	}
