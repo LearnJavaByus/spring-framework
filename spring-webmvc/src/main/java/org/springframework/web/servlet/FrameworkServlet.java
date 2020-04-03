@@ -524,10 +524,13 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		if (logger.isInfoEnabled()) {
 			logger.info("Initializing Servlet '" + getServletName() + "'");
 		}
+		// 记录开始时间
 		long startTime = System.currentTimeMillis();
 
 		try {
+			/* 初始化web应用上下文 */
 			this.webApplicationContext = initWebApplicationContext();
+			// 默认空实现，留给子类扩展一些自定义的初始化需求
 			initFrameworkServlet();
 		}
 		catch (ServletException | RuntimeException ex) {
@@ -544,6 +547,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		}
 
 		if (logger.isInfoEnabled()) {
+			// 计算并打印初始化耗时
 			logger.info("Completed initialization in " + (System.currentTimeMillis() - startTime) + " ms");
 		}
 	}
@@ -562,6 +566,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 				WebApplicationContextUtils.getWebApplicationContext(getServletContext());
 		WebApplicationContext wac = null;
 
+		// 这个if判断内的初始化逻辑，在上文已经介绍过
 		if (this.webApplicationContext != null) {
 			// A context instance was injected at construction time -> use it
 			wac = this.webApplicationContext;
@@ -584,10 +589,14 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 			// has been registered in the servlet context. If one exists, it is assumed
 			// that the parent context (if any) has already been set and that the
 			// user has performed any initialization such as setting the context id
+			// 如果上下文为空则尝试从用户配置的contextAttribute属性加载WebApplicationContext，
+			// 这里要保证WebApplicationContext已经加载并存入ServiceContext中
 			wac = findWebApplicationContext();
 		}
 		if (wac == null) {
 			// No context instance is defined for this servlet -> create a local one
+			// 如果到这里上下文还是为空则创建本地默认的XmlWebApplicationContext，
+			// 创建和初始化过程与上文讲述的过程非常相似
 			wac = createWebApplicationContext(rootContext);
 		}
 
@@ -596,12 +605,14 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 			// support or the context injected at construction time had already been
 			// refreshed -> trigger initial onRefresh manually here.
 			synchronized (this.onRefreshMonitor) {
+				/* 默认子类实现初始化一些servlet需要的对象 */
 				onRefresh(wac);
 			}
 		}
 
 		if (this.publishContext) {
 			// Publish the context as a servlet context attribute.
+			// 将上下文对象设置到ServletContext的属性中
 			String attrName = getServletContextAttributeName();
 			getServletContext().setAttribute(attrName, wac);
 		}

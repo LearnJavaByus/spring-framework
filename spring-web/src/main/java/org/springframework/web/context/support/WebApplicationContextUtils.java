@@ -182,7 +182,7 @@ public abstract class WebApplicationContextUtils {
 	 */
 	public static void registerWebApplicationScopes(ConfigurableListableBeanFactory beanFactory,
 			@Nullable ServletContext sc) {
-
+		// 注册几个自定义的scope
 		beanFactory.registerScope(WebApplicationContext.SCOPE_REQUEST, new RequestScope());
 		beanFactory.registerScope(WebApplicationContext.SCOPE_SESSION, new SessionScope());
 		if (sc != null) {
@@ -191,7 +191,7 @@ public abstract class WebApplicationContextUtils {
 			// Register as ServletContext attribute, for ContextCleanupListener to detect it.
 			sc.setAttribute(ServletContextScope.class.getName(), appScope);
 		}
-
+		// 添加几个自动装配的接口
 		beanFactory.registerResolvableDependency(ServletRequest.class, new RequestObjectFactory());
 		beanFactory.registerResolvableDependency(ServletResponse.class, new ResponseObjectFactory());
 		beanFactory.registerResolvableDependency(HttpSession.class, new SessionObjectFactory());
@@ -222,10 +222,12 @@ public abstract class WebApplicationContextUtils {
 			@Nullable ServletContext servletContext, @Nullable ServletConfig servletConfig) {
 
 		if (servletContext != null && !bf.containsBean(WebApplicationContext.SERVLET_CONTEXT_BEAN_NAME)) {
+			// 注册servletContext
 			bf.registerSingleton(WebApplicationContext.SERVLET_CONTEXT_BEAN_NAME, servletContext);
 		}
 
 		if (servletConfig != null && !bf.containsBean(ConfigurableWebApplicationContext.SERVLET_CONFIG_BEAN_NAME)) {
+			// 注册servletConfig
 			bf.registerSingleton(ConfigurableWebApplicationContext.SERVLET_CONFIG_BEAN_NAME, servletConfig);
 		}
 
@@ -245,6 +247,7 @@ public abstract class WebApplicationContextUtils {
 					parameterMap.put(paramName, servletConfig.getInitParameter(paramName));
 				}
 			}
+			// 注册contextParameters
 			bf.registerSingleton(WebApplicationContext.CONTEXT_PARAMETERS_BEAN_NAME,
 					Collections.unmodifiableMap(parameterMap));
 		}
@@ -258,6 +261,7 @@ public abstract class WebApplicationContextUtils {
 					attributeMap.put(attrName, servletContext.getAttribute(attrName));
 				}
 			}
+			// 注册contextAttributes
 			bf.registerSingleton(WebApplicationContext.CONTEXT_ATTRIBUTES_BEAN_NAME,
 					Collections.unmodifiableMap(attributeMap));
 		}

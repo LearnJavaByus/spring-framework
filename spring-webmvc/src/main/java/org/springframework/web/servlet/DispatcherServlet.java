@@ -500,14 +500,23 @@ public class DispatcherServlet extends FrameworkServlet {
 	 * <p>May be overridden in subclasses in order to initialize further strategy objects.
 	 */
 	protected void initStrategies(ApplicationContext context) {
+		/* 初始化MultipartResolver */
 		initMultipartResolver(context);
+		/* 初始化LocaleResolver */
 		initLocaleResolver(context);
+		/* 初始化ThemeResolver */
 		initThemeResolver(context);
+		/* 初始化HandlerMapping */
 		initHandlerMappings(context);
+		/* 初始化HandlerAdapter */
 		initHandlerAdapters(context);
+		/* 初始化HandlerExceptionResolver */
 		initHandlerExceptionResolvers(context);
+		/* 初始化RequestToViewNameTranslator */
 		initRequestToViewNameTranslator(context);
+		/* 初始化ViewResolver */
 		initViewResolvers(context);
+		/* 初始化FlashMapManager */
 		initFlashMapManager(context);
 	}
 
@@ -518,6 +527,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	private void initMultipartResolver(ApplicationContext context) {
 		try {
+			// 获取到对应bean并赋值给对应的属性，MultipartResolver主要用于解析文件上传的参数
 			this.multipartResolver = context.getBean(MULTIPART_RESOLVER_BEAN_NAME, MultipartResolver.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Detected " + this.multipartResolver);
@@ -542,6 +552,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	private void initLocaleResolver(ApplicationContext context) {
 		try {
+			// 获取到对应bean并赋值给对应的属性，LocaleResolver主要用于支持国际化处理
 			this.localeResolver = context.getBean(LOCALE_RESOLVER_BEAN_NAME, LocaleResolver.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Detected " + this.localeResolver);
@@ -552,6 +563,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		}
 		catch (NoSuchBeanDefinitionException ex) {
 			// We need to use the default.
+			// 没有则使用默认的策略
 			this.localeResolver = getDefaultStrategy(context, LocaleResolver.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No LocaleResolver '" + LOCALE_RESOLVER_BEAN_NAME +
@@ -567,6 +579,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	private void initThemeResolver(ApplicationContext context) {
 		try {
+			// 获取到对应bean并赋值给对应的属性，ThemeResolver主要用于控制网页风格的主题（比如静态资源，css或图片等）
 			this.themeResolver = context.getBean(THEME_RESOLVER_BEAN_NAME, ThemeResolver.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Detected " + this.themeResolver);
@@ -576,7 +589,7 @@ public class DispatcherServlet extends FrameworkServlet {
 			}
 		}
 		catch (NoSuchBeanDefinitionException ex) {
-			// We need to use the default.
+			// We need to use the default.  // 没有则使用默认的策略
 			this.themeResolver = getDefaultStrategy(context, ThemeResolver.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No ThemeResolver '" + THEME_RESOLVER_BEAN_NAME +
@@ -593,18 +606,21 @@ public class DispatcherServlet extends FrameworkServlet {
 	private void initHandlerMappings(ApplicationContext context) {
 		this.handlerMappings = null;
 
-		if (this.detectAllHandlerMappings) {
+		if (this.detectAllHandlerMappings) { // 默认为true
 			// Find all HandlerMappings in the ApplicationContext, including ancestor contexts.
+			// 加载所有HandlerMapping类型的bean，HandlerMapping的作用在后文会详细说明
 			Map<String, HandlerMapping> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
 			if (!matchingBeans.isEmpty()) {
+				// 设置到handlerMappings属性中
 				this.handlerMappings = new ArrayList<>(matchingBeans.values());
-				// We keep HandlerMappings in sorted order.
+				// We keep HandlerMappings in sorted order.  // 按照@Order注解排序
 				AnnotationAwareOrderComparator.sort(this.handlerMappings);
 			}
 		}
-		else {
+		else { // 如果不想加载所有的HandlerMapping类型bean，只希望加载指定的，可以在web.xml的init-param配置中将detectAllHandlerMappings设置为false
 			try {
+				// 获取到指定的bean并赋值给对应的属性
 				HandlerMapping hm = context.getBean(HANDLER_MAPPING_BEAN_NAME, HandlerMapping.class);
 				this.handlerMappings = Collections.singletonList(hm);
 			}
@@ -616,6 +632,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		// Ensure we have at least one HandlerMapping, by registering
 		// a default HandlerMapping if no other mappings are found.
 		if (this.handlerMappings == null) {
+			// 没有则使用默认的策略
 			this.handlerMappings = getDefaultStrategies(context, HandlerMapping.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No HandlerMappings declared for servlet '" + getServletName() +
@@ -632,18 +649,21 @@ public class DispatcherServlet extends FrameworkServlet {
 	private void initHandlerAdapters(ApplicationContext context) {
 		this.handlerAdapters = null;
 
-		if (this.detectAllHandlerAdapters) {
+		if (this.detectAllHandlerAdapters) {  // 默认为true
 			// Find all HandlerAdapters in the ApplicationContext, including ancestor contexts.
+			// 加载所有HandlerAdapter类型的bean，HandlerAdapter的作用在后文会详细说明
 			Map<String, HandlerAdapter> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerAdapter.class, true, false);
 			if (!matchingBeans.isEmpty()) {
+				// 设置到handlerAdapters属性中
 				this.handlerAdapters = new ArrayList<>(matchingBeans.values());
-				// We keep HandlerAdapters in sorted order.
+				// We keep HandlerAdapters in sorted order. // 按照@Order注解排序
 				AnnotationAwareOrderComparator.sort(this.handlerAdapters);
 			}
 		}
-		else {
+		else { // 如果不想加载所有的HandlerAdapter类型bean，只希望加载指定的，可以在web.xml的init-param配置中将detectAllHandlerAdapters设置为false
 			try {
+				// 获取到指定的bean并赋值给对应的属性
 				HandlerAdapter ha = context.getBean(HANDLER_ADAPTER_BEAN_NAME, HandlerAdapter.class);
 				this.handlerAdapters = Collections.singletonList(ha);
 			}
@@ -655,6 +675,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		// Ensure we have at least some HandlerAdapters, by registering
 		// default HandlerAdapters if no other adapters are found.
 		if (this.handlerAdapters == null) {
+			// 没有则使用默认的策略
 			this.handlerAdapters = getDefaultStrategies(context, HandlerAdapter.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No HandlerAdapters declared for servlet '" + getServletName() +
@@ -671,18 +692,21 @@ public class DispatcherServlet extends FrameworkServlet {
 	private void initHandlerExceptionResolvers(ApplicationContext context) {
 		this.handlerExceptionResolvers = null;
 
-		if (this.detectAllHandlerExceptionResolvers) {
+		if (this.detectAllHandlerExceptionResolvers) {  // 默认为true
 			// Find all HandlerExceptionResolvers in the ApplicationContext, including ancestor contexts.
+			// 加载所有HandlerExceptionResolver类型的bean，HandlerExceptionResolver的作用在后文会详细说明
 			Map<String, HandlerExceptionResolver> matchingBeans = BeanFactoryUtils
 					.beansOfTypeIncludingAncestors(context, HandlerExceptionResolver.class, true, false);
 			if (!matchingBeans.isEmpty()) {
+				// 设置到handlerExceptionResolvers 属性中
 				this.handlerExceptionResolvers = new ArrayList<>(matchingBeans.values());
-				// We keep HandlerExceptionResolvers in sorted order.
+				// We keep HandlerExceptionResolvers in sorted order. // 按照@Order注解排序
 				AnnotationAwareOrderComparator.sort(this.handlerExceptionResolvers);
 			}
 		}
-		else {
+		else { // 如果不想加载所有的HandlerExceptionResolver类型bean，只希望加载指定的，可以在web.xml的init-param配置中将detectAllHandlerExceptionResolvers设置为false
 			try {
+				// 获取到指定的bean并赋值给对应的属性
 				HandlerExceptionResolver her =
 						context.getBean(HANDLER_EXCEPTION_RESOLVER_BEAN_NAME, HandlerExceptionResolver.class);
 				this.handlerExceptionResolvers = Collections.singletonList(her);
@@ -695,6 +719,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		// Ensure we have at least some HandlerExceptionResolvers, by registering
 		// default HandlerExceptionResolvers if no other resolvers are found.
 		if (this.handlerExceptionResolvers == null) {
+			// 没有则使用默认的策略
 			this.handlerExceptionResolvers = getDefaultStrategies(context, HandlerExceptionResolver.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No HandlerExceptionResolvers declared in servlet '" + getServletName() +
@@ -709,6 +734,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	private void initRequestToViewNameTranslator(ApplicationContext context) {
 		try {
+			// 获取到对应bean并赋值给对应的属性，默认情况下会翻译路径返回一个视图
 			this.viewNameTranslator =
 					context.getBean(REQUEST_TO_VIEW_NAME_TRANSLATOR_BEAN_NAME, RequestToViewNameTranslator.class);
 			if (logger.isTraceEnabled()) {
@@ -736,18 +762,21 @@ public class DispatcherServlet extends FrameworkServlet {
 	private void initViewResolvers(ApplicationContext context) {
 		this.viewResolvers = null;
 
-		if (this.detectAllViewResolvers) {
+		if (this.detectAllViewResolvers) { // 默认为true
 			// Find all ViewResolvers in the ApplicationContext, including ancestor contexts.
+			// 加载所有ViewResolver类型的bean，ViewResolver的作用在后文会详细说明
 			Map<String, ViewResolver> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, ViewResolver.class, true, false);
 			if (!matchingBeans.isEmpty()) {
+				// 设置到viewResolvers 属性中
 				this.viewResolvers = new ArrayList<>(matchingBeans.values());
-				// We keep ViewResolvers in sorted order.
+				// We keep ViewResolvers in sorted order. // 按照@Order注解排序
 				AnnotationAwareOrderComparator.sort(this.viewResolvers);
 			}
 		}
-		else {
+		else { // 如果不想加载所有的ViewResolver类型bean，只希望加载指定的，可以在web.xml的init-param配置中将detectAllViewResolvers设置为false
 			try {
+				// 获取到指定的bean并赋值给对应的属性
 				ViewResolver vr = context.getBean(VIEW_RESOLVER_BEAN_NAME, ViewResolver.class);
 				this.viewResolvers = Collections.singletonList(vr);
 			}
@@ -759,6 +788,7 @@ public class DispatcherServlet extends FrameworkServlet {
 		// Ensure we have at least one ViewResolver, by registering
 		// a default ViewResolver if no other resolvers are found.
 		if (this.viewResolvers == null) {
+			// 没有则使用默认的策略
 			this.viewResolvers = getDefaultStrategies(context, ViewResolver.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No ViewResolvers declared for servlet '" + getServletName() +
@@ -774,6 +804,8 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	private void initFlashMapManager(ApplicationContext context) {
 		try {
+			// 获取到对应的bean并赋值给对应的属性，FlashMapManager的作用主要是提供了一个请求存储属性，
+			// 可供其他请求使用，例如重定向之后还能使用重定向之前暂存的属性
 			this.flashMapManager = context.getBean(FLASH_MAP_MANAGER_BEAN_NAME, FlashMapManager.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Detected " + this.flashMapManager.getClass().getSimpleName());
@@ -783,7 +815,7 @@ public class DispatcherServlet extends FrameworkServlet {
 			}
 		}
 		catch (NoSuchBeanDefinitionException ex) {
-			// We need to use the default.
+			// We need to use the default.   // 没有则使用默认的策略
 			this.flashMapManager = getDefaultStrategy(context, FlashMapManager.class);
 			if (logger.isTraceEnabled()) {
 				logger.trace("No FlashMapManager '" + FLASH_MAP_MANAGER_BEAN_NAME +
