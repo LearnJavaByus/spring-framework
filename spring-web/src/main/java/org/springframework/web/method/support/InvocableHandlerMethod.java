@@ -130,11 +130,12 @@ public class InvocableHandlerMethod extends HandlerMethod {
 	@Nullable
 	public Object invokeForRequest(NativeWebRequest request, @Nullable ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
-
+		/* 获取当前请求的方法参数 */
 		Object[] args = getMethodArgumentValues(request, mavContainer, providedArgs);
 		if (logger.isTraceEnabled()) {
 			logger.trace("Arguments: " + Arrays.toString(args));
 		}
+		/* 调用 */
 		return doInvoke(args);
 	}
 
@@ -153,17 +154,20 @@ public class InvocableHandlerMethod extends HandlerMethod {
 		}
 
 		Object[] args = new Object[parameters.length];
-		for (int i = 0; i < parameters.length; i++) {
+		for (int i = 0; i < parameters.length; i++) { // 遍历方法参数列表
 			MethodParameter parameter = parameters[i];
 			parameter.initParameterNameDiscovery(this.parameterNameDiscoverer);
+			// 试图从提供的参数值列表中解析方法参数
 			args[i] = findProvidedArgument(parameter, providedArgs);
 			if (args[i] != null) {
 				continue;
 			}
-			if (!this.resolvers.supportsParameter(parameter)) {
+			// 这里的argumentsResolvers我们在分析RequestMappingHandlerAdapter的afterPropertiesSet方法时看到过它的初始化过程，并且在构建InvocableHandlerMethod时set进来的
+			if (!this.resolvers.supportsParameter(parameter)) { /* 判断是否支持解析当前方法参数 */
 				throw new IllegalStateException(formatArgumentError(parameter, "No suitable resolver"));
 			}
 			try {
+				/* 解析方法参数 */
 				args[i] = this.resolvers.resolveArgument(parameter, mavContainer, request, this.dataBinderFactory);
 			}
 			catch (Exception ex) {
@@ -181,12 +185,13 @@ public class InvocableHandlerMethod extends HandlerMethod {
 	}
 
 	/**
-	 * Invoke the handler method with the given argument values.
+	 * Invoke the handler method with the given argument values.   调用
 	 */
 	@Nullable
 	protected Object doInvoke(Object... args) throws Exception {
 		ReflectionUtils.makeAccessible(getBridgedMethod());
 		try {
+			// 获取bridge方法反射执行
 			return getBridgedMethod().invoke(getBean(), args);
 		}
 		catch (IllegalArgumentException ex) {

@@ -105,13 +105,16 @@ public final class ModelFactory {
 	 */
 	public void initModel(NativeWebRequest request, ModelAndViewContainer container, HandlerMethod handlerMethod)
 			throws Exception {
-
+		// 检索session属性
 		Map<String, ?> sessionAttributes = this.sessionAttributesHandler.retrieveAttributes(request);
+		// 合并到ModelAndView容器，放入ModelMap中
 		container.mergeAttributes(sessionAttributes);
+		/* 调用model属性方法填充model，仅仅填充那些model中没有出现的的属性 */
 		invokeModelAttributeMethods(request, container);
-
+		// 获取handlerMethod的方法参数上注解的@ModelAttribute的name属性
 		for (String name : findSessionAttributeArguments(handlerMethod)) {
 			if (!container.containsAttribute(name)) {
+				// 检索session属性
 				Object value = this.sessionAttributesHandler.retrieveAttribute(request, name);
 				if (value == null) {
 					throw new HttpSessionRequiredException("Expected session attribute '" + name + "'", name);
@@ -129,18 +132,22 @@ public final class ModelFactory {
 			throws Exception {
 
 		while (!this.modelMethods.isEmpty()) {
+			// 这里获取的modelMethod是在构造ModelFactory时传入的从ControllerAdviceBean和HandlerMethod中提取的由@ModelAttribute注解的方法，这里会提取并从缓存中移除掉
 			InvocableHandlerMethod modelMethod = getNextModelMethod(container).getHandlerMethod();
 			ModelAttribute ann = modelMethod.getMethodAnnotation(ModelAttribute.class);
 			Assert.state(ann != null, "No ModelAttribute annotation");
+			// 如果容器的ModelMap的key中已经包含当前注解的name值，则不在调用
 			if (container.containsAttribute(ann.name())) {
 				if (!ann.binding()) {
+					// 如果注解的binding属性设置为false，则添加到不可用绑定属性集合中
 					container.setBindingDisabled(ann.name());
 				}
 				continue;
 			}
-
+			/* 调用HandlerMethod，这里调用的是ModelMethod */
 			Object returnValue = modelMethod.invokeForRequest(request, container);
 			if (!modelMethod.isVoid()){
+				// 获取返回值名称，按照如下顺序，首先获取注解声明的value属性，为空则判断声明的返回值类型是否比Object类型更具体，否则使用实际的返回值类型
 				String returnValueName = getNameForReturnValue(returnValue, modelMethod.getReturnType());
 				if (!ann.binding()) {
 					container.setBindingDisabled(returnValueName);

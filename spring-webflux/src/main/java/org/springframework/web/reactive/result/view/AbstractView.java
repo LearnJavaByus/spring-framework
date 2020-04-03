@@ -197,7 +197,7 @@ public abstract class AbstractView implements View, BeanNameAware, ApplicationCo
 		if (contentType != null) {
 			exchange.getResponse().getHeaders().setContentType(contentType);
 		}
-
+		// 创建一个包含动态值和静态属性的组合输出映射，动态值优先于静态属性
 		return getModelAttributes(model, exchange).flatMap(mergedModel -> {
 			// Expose RequestContext?
 			if (this.requestContextAttribute != null) {

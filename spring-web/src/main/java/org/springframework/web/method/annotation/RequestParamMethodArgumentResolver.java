@@ -124,6 +124,7 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 	 */
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
+		// 如果参数有@RequestParam注解，需要判断是否是Map类型，如果是注解必须指定具体的名称，否则交给RequestParamMapMethodArgumentResolver解析
 		if (parameter.hasParameterAnnotation(RequestParam.class)) {
 			if (Map.class.isAssignableFrom(parameter.nestedIfOptional().getNestedParameterType())) {
 				RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
@@ -134,14 +135,17 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 			}
 		}
 		else {
+			// @RequestPart注解不支持
 			if (parameter.hasParameterAnnotation(RequestPart.class)) {
 				return false;
 			}
 			parameter = parameter.nestedIfOptional();
+			// 支持解析MultipartFile类型和Part类型
 			if (MultipartResolutionDelegate.isMultipartArgument(parameter)) {
 				return true;
 			}
 			else if (this.useDefaultResolution) {
+				// 支持解析简单的类型，如基本类型、String类型、Number类型等等
 				return BeanUtils.isSimpleProperty(parameter.getNestedParameterType());
 			}
 			else {
@@ -153,6 +157,7 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 	@Override
 	protected NamedValueInfo createNamedValueInfo(MethodParameter parameter) {
 		RequestParam ann = parameter.getParameterAnnotation(RequestParam.class);
+		// 获取参数@RequestParam注解对象封装到RequestParamNamedValueInfo中
 		return (ann != null ? new RequestParamNamedValueInfo(ann) : new RequestParamNamedValueInfo());
 	}
 
