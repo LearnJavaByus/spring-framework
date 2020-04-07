@@ -303,10 +303,12 @@ public class ContextLoader {
 			servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);
 
 			ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+			// 判断是否同一加载器
 			if (ccl == ContextLoader.class.getClassLoader()) {
 				currentContext = this.context;
 			}
 			else if (ccl != null) {
+				// 不是同一加载器，放入缓存
 				currentContextPerThread.put(ccl, this.context);
 			}
 

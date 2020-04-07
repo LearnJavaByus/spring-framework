@@ -113,10 +113,11 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 
 	@Override
 	public void afterPropertiesSet() {
+		// 设置一些配置属性
 		this.config = new RequestMappingInfo.BuilderConfiguration();
 		this.config.setPatternParser(getPathPatternParser());
 		this.config.setContentTypeResolver(getContentTypeResolver());
-
+		/* 调用父类的afterPropertiesSet方法 */
 		super.afterPropertiesSet();
 	}
 

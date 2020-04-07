@@ -336,12 +336,14 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping i
 			String handlerName = (String) handler;
 			ApplicationContext applicationContext = obtainApplicationContext();
 			if (applicationContext.isSingleton(handlerName)) {
+				// 如果handler为String类型，则按照beanName的方式创建handler
 				resolvedHandler = applicationContext.getBean(handlerName);
 			}
 		}
 
 		Object mappedHandler = this.handlerMap.get(urlPath);
 		if (mappedHandler != null) {
+			// 如果url对应的已经注册的handler与当前handler不同，抛出异常
 			if (mappedHandler != resolvedHandler) {
 				throw new IllegalStateException(
 						"Cannot map " + getHandlerDescription(handler) + " to URL path [" + urlPath +
@@ -353,15 +355,18 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping i
 				if (logger.isTraceEnabled()) {
 					logger.trace("Root mapping to " + getHandlerDescription(handler));
 				}
+				// 如果handler的beanName等于/，设置为root handler
 				setRootHandler(resolvedHandler);
 			}
 			else if (urlPath.equals("/*")) {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Default mapping to " + getHandlerDescription(handler));
 				}
+				// 如果handler的beanName等于/* ，设置为默认handler
 				setDefaultHandler(resolvedHandler);
 			}
 			else {
+				// 注册为普通handler
 				this.handlerMap.put(urlPath, resolvedHandler);
 				if (logger.isTraceEnabled()) {
 					logger.trace("Mapped [" + urlPath + "] onto " + getHandlerDescription(handler));
