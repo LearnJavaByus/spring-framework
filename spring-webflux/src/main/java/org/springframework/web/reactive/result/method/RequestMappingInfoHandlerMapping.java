@@ -103,7 +103,7 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 		PathPattern bestPattern;
 		Map<String, String> uriVariables;
 		Map<String, MultiValueMap<String, String>> matrixVariables;
-
+		// 获取通配符uri，如/user/{id}/get
 		Set<PathPattern> patterns = info.getPatternsCondition().getPatterns();
 		if (patterns.isEmpty()) {
 			bestPattern = getPathPatternParser().parse(lookupPath.value());
@@ -112,13 +112,16 @@ public abstract class RequestMappingInfoHandlerMapping extends AbstractHandlerMe
 		}
 		else {
 			bestPattern = patterns.iterator().next();
+			// 获取url变量，如id --> 1
 			PathPattern.PathMatchInfo result = bestPattern.matchAndExtract(lookupPath);
 			Assert.notNull(result, () ->
 					"Expected bestPattern: " + bestPattern + " to match lookupPath " + lookupPath);
+			// 获取url变量，如id --> 1
 			uriVariables = result.getUriVariables();
+			// url解码
 			matrixVariables = result.getMatrixVariables();
 		}
-
+		// 下面为将相关信息放入request对象中
 		exchange.getAttributes().put(BEST_MATCHING_HANDLER_ATTRIBUTE, handlerMethod);
 		exchange.getAttributes().put(BEST_MATCHING_PATTERN_ATTRIBUTE, bestPattern);
 		exchange.getAttributes().put(URI_TEMPLATE_VARIABLES_ATTRIBUTE, uriVariables);

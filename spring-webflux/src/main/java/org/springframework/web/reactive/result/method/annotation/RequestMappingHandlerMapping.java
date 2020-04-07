@@ -124,6 +124,9 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	/**
 	 * {@inheritDoc}
 	 * Expects a handler to have a type-level @{@link Controller} annotation.
+	 *
+	 * 判断是否是handler的逻辑很简单，就是看类是否有@Controller注解或@RequestMapping注解
+	 *
 	 */
 	@Override
 	protected boolean isHandler(Class<?> beanType) {
@@ -141,10 +144,13 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	 */
 	@Override
 	protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
+		/* 创建RequestMappingInfo */
 		RequestMappingInfo info = createRequestMappingInfo(method);
 		if (info != null) {
+			/* 创建RequestMappingInfo */
 			RequestMappingInfo typeInfo = createRequestMappingInfo(handlerType);
 			if (typeInfo != null) {
+				// 将根据类的注解创建的RequestMappingInfo与根据方法的注解的创建的RequestMappingInfo结合
 				info = typeInfo.combine(info);
 			}
 			for (Map.Entry<String, Predicate<Class<?>>> entry : this.pathPrefixes.entrySet()) {
@@ -170,9 +176,13 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	 */
 	@Nullable
 	private RequestMappingInfo createRequestMappingInfo(AnnotatedElement element) {
+		// 合并@RequestMapping注解信息，要合并父类或者实现的接口的注解信息
+		// 并且加工注解了@AliasFor的注解的属性，用JDK动态代理生成代理类包装这些信息返回
 		RequestMapping requestMapping = AnnotatedElementUtils.findMergedAnnotation(element, RequestMapping.class);
+		// 留给子类扩展自定义的请求条件，默认空实现
 		RequestCondition<?> condition = (element instanceof Class ?
 				getCustomTypeCondition((Class<?>) element) : getCustomMethodCondition((Method) element));
+		// 将注解的属性信息封装到RequestMappingInfo对象中返回
 		return (requestMapping != null ? createRequestMappingInfo(requestMapping, condition) : null);
 	}
 

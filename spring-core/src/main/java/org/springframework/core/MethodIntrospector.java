@@ -70,9 +70,12 @@ public final class MethodIntrospector {
 			final Class<?> targetClass = (specificHandlerType != null ? specificHandlerType : currentHandlerType);
 
 			ReflectionUtils.doWithMethods(currentHandlerType, method -> {
+				// 获取具体的方法，例如如果类实现了接口的方法，需要获取到具体实现类的方法
 				Method specificMethod = ClassUtils.getMostSpecificMethod(method, targetClass);
+				/* 获取元数据，由调用时传入的匿名对象实现 */
 				T result = metadataLookup.inspect(specificMethod);
 				if (result != null) {
+					// 获取bridge方法
 					Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(specificMethod);
 					if (bridgedMethod == specificMethod || metadataLookup.inspect(bridgedMethod) == null) {
 						methodMap.put(specificMethod, result);

@@ -13,7 +13,7 @@ dependencies {
     compile(project(":spring-context"))
     compile(project(":spring-beans"))
     compile(project(":spring-instrument"))
-
+    compile(project(":spring-webmvc"))
 }
 
 repositories {

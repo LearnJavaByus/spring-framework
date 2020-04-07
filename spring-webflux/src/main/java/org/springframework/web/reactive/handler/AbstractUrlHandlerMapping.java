@@ -84,9 +84,12 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 
 	@Override
 	public Mono<Object> getHandlerInternal(ServerWebExchange exchange) {
+		// 截取用于匹配的有效路径
 		PathContainer lookupPath = exchange.getRequest().getPath().pathWithinApplication();
+
 		Object handler;
 		try {
+			/* 根据路径寻找handler */
 			handler = lookupHandler(lookupPath, exchange);
 		}
 		catch (Exception ex) {
@@ -107,7 +110,7 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 	 */
 	@Nullable
 	protected Object lookupHandler(PathContainer lookupPath, ServerWebExchange exchange) throws Exception {
-
+		// 从上文填充的handlerMap中遍历符合的，并收集
 		List<PathPattern> matches = this.handlerMap.keySet().stream()
 				.filter(key -> key.matches(lookupPath))
 				.collect(Collectors.toList());
@@ -136,7 +139,7 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 			String handlerName = (String) handler;
 			handler = obtainApplicationContext().getBean(handlerName);
 		}
-
+		// 校验handler，默认空实现，留给子类扩展
 		validateHandler(handler, exchange);
 
 		exchange.getAttributes().put(BEST_MATCHING_HANDLER_ATTRIBUTE, handler);
@@ -167,6 +170,7 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 	protected void registerHandler(String[] urlPaths, String beanName) throws BeansException, IllegalStateException {
 		Assert.notNull(urlPaths, "URL path array must not be null");
 		for (String urlPath : urlPaths) {
+			/* 注册handler */
 			registerHandler(urlPath, beanName);
 		}
 	}
@@ -190,6 +194,7 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 		if (this.handlerMap.containsKey(pattern)) {
 			Object existingHandler = this.handlerMap.get(pattern);
 			if (existingHandler != null && existingHandler != resolvedHandler) {
+				// 如果url对应的已经注册的handler与当前handler不同，抛出异常
 				throw new IllegalStateException(
 						"Cannot map " + getHandlerDescription(handler) + " to [" + urlPath + "]: " +
 						"there is already " + getHandlerDescription(existingHandler) + " mapped.");
@@ -200,6 +205,7 @@ public abstract class AbstractUrlHandlerMapping extends AbstractHandlerMapping {
 		if (!this.lazyInitHandlers && handler instanceof String) {
 			String handlerName = (String) handler;
 			if (obtainApplicationContext().isSingleton(handlerName)) {
+				// 如果handler为String类型，则按照beanName的方式创建handler
 				resolvedHandler = obtainApplicationContext().getBean(handlerName);
 			}
 		}

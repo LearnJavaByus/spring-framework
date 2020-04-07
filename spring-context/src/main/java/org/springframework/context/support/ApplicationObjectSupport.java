@@ -75,6 +75,7 @@ public abstract class ApplicationObjectSupport implements ApplicationContextAwar
 			}
 			this.applicationContext = context;
 			this.messageSourceAccessor = new MessageSourceAccessor(context);
+			/* 子类扩展实现自定义初始化操作 */
 			initApplicationContext(context);
 		}
 		else {
@@ -121,6 +122,7 @@ public abstract class ApplicationObjectSupport implements ApplicationContextAwar
 	 * @see #setApplicationContext
 	 */
 	protected void initApplicationContext(ApplicationContext context) throws BeansException {
+		/* 子类扩展实现自定义初始化操作 */
 		initApplicationContext();
 	}
 

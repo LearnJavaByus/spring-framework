@@ -152,7 +152,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 */
 	@Override
 	public void afterPropertiesSet() {
-
+		/* 初始化handler方法 */
 		initHandlerMethods();
 
 		// Total includes detected mappings + explicit registrations via registerMapping..
@@ -170,12 +170,14 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * @see #handlerMethodsInitialized(Map)
 	 */
 	protected void initHandlerMethods() {
+		// 获取所有的beanName
 		String[] beanNames = obtainApplicationContext().getBeanNamesForType(Object.class);
 
 		for (String beanName : beanNames) {
 			if (!beanName.startsWith(SCOPED_TARGET_NAME_PREFIX)) {
 				Class<?> beanType = null;
 				try {
+					// 获取beanName对应的class
 					beanType = obtainApplicationContext().getType(beanName);
 				}
 				catch (Throwable ex) {
@@ -184,11 +186,14 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 						logger.trace("Could not resolve type for bean '" + beanName + "'", ex);
 					}
 				}
+				/* 判断是否是handler */
 				if (beanType != null && isHandler(beanType)) {
+					/* 寻找handler方法 */
 					detectHandlerMethods(beanName);
 				}
 			}
 		}
+		// 留给子类扩展对已经初始化完毕的handler做一些个性化的处理
 		handlerMethodsInitialized(getHandlerMethods());
 	}
 
@@ -197,18 +202,25 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * @param handler the bean name of a handler or a handler instance
 	 */
 	protected void detectHandlerMethods(final Object handler) {
+		// 获取handler的class类型
 		Class<?> handlerType = (handler instanceof String ?
 				obtainApplicationContext().getType((String) handler) : handler.getClass());
 
 		if (handlerType != null) {
+			// 获取用户定义的class，上面获取的class有可能是CGLIB动态代理生成的class
+			// （CGLIB生成的class名称中会有$$符号，判断名称中是否包含$$符号来确定是否是CGLIB生成的class），这样就需要获取它的父类
 			final Class<?> userType = ClassUtils.getUserClass(handlerType);
+			// 获取方法中的元数据并与方法构建映射，  /* getMappingForMethod获取方法的RequestMapping信息 */
 			Map<Method, T> methods = MethodIntrospector.selectMethods(userType,
 					(MethodIntrospector.MetadataLookup<T>) method -> getMappingForMethod(method, userType));
 			if (logger.isTraceEnabled()) {
 				logger.trace(formatMappings(userType, methods));
 			}
 			methods.forEach((key, mapping) -> {
+				// 获取userType的相关可调用方法（如果方法所属的类型是userType类型或者是它的父类，则选中方法，否则从userType的接口中根据方法的名称和参数列表尝试获取方法，以上都获取不到会最后尝试从代理类本身获取方法）
+				// 并校验（如果选中的方法的代理类的private方法，并且是非静态的，则会抛出异常）
 				Method invocableMethod = AopUtils.selectInvocableMethod(key, userType);
+				/* 注册HandlerMethod */
 				registerHandlerMethod(handler, invocableMethod, mapping);
 			});
 		}
@@ -239,6 +251,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * under the same mapping
 	 */
 	protected void registerHandlerMethod(Object handler, Method method, T mapping) {
+		/* 注册 */
 		this.mappingRegistry.register(mapping, handler, method);
 	}
 
@@ -289,11 +302,14 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 		try {
 			HandlerMethod handlerMethod;
 			try {
+				/* 获取HandlerMethod */
 				handlerMethod = lookupHandlerMethod(exchange);
 			}
 			catch (Exception ex) {
 				return Mono.error(ex);
 			}
+			// 如果获取到的HandlerMethod中封装的handler是String类型
+			// 要根据beanName的方式创建handler并封装到一个新的HandlerMethod中返回
 			if (handlerMethod != null) {
 				handlerMethod = handlerMethod.createWithResolvedBean();
 			}
@@ -315,11 +331,14 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	@Nullable
 	protected HandlerMethod lookupHandlerMethod(ServerWebExchange exchange) throws Exception {
 		List<Match> matches = new ArrayList<>();
+		// 添加到匹配的映射集合中 ， 根据url在之前注册的缓存中获取RequestMappingInfo信息
 		addMatchingMappings(this.mappingRegistry.getMappings().keySet(), matches, exchange);
 
 		if (!matches.isEmpty()) {
 			Comparator<Match> comparator = new MatchComparator(getMappingComparator(exchange));
+			// 用RequestMappingInfo中的compareTo方法进行比较做排序
 			matches.sort(comparator);
+			// 获取匹配值最高的
 			Match bestMatch = matches.get(0);
 			if (matches.size() > 1) {
 				if (logger.isTraceEnabled()) {
@@ -329,6 +348,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 					return PREFLIGHT_AMBIGUOUS_MATCH;
 				}
 				Match secondBestMatch = matches.get(1);
+				// 校验如果有两个以上的匹配值最高的Match抛出异常，不知道该用哪个
 				if (comparator.compare(bestMatch, secondBestMatch) == 0) {
 					Method m1 = bestMatch.handlerMethod.getMethod();
 					Method m2 = secondBestMatch.handlerMethod.getMethod();
@@ -337,18 +357,22 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 							"Ambiguous handler methods mapped for '" + path + "': {" + m1 + ", " + m2 + "}");
 				}
 			}
+			/* 处理匹配到的资源 */
 			handleMatch(bestMatch.mapping, bestMatch.handlerMethod, exchange);
 			return bestMatch.handlerMethod;
 		}
 		else {
+			// 没有匹配到，别无选择，只能尝试遍历所有的映射来匹配
 			return handleNoMatch(this.mappingRegistry.getMappings().keySet(), exchange);
 		}
 	}
 
 	private void addMatchingMappings(Collection<T> mappings, List<Match> matches, ServerWebExchange exchange) {
 		for (T mapping : mappings) {
+			// 获取request匹配的条件（如Header、Param等）并封装到RequestMappingInfo中
 			T match = getMatchingMapping(mapping, exchange);
 			if (match != null) {
+				// 根据RequestMappingInfo获取缓存中对应的HandlerMethod一同封装到Match对象中
 				matches.add(new Match(match, this.mappingRegistry.getMappings().get(mapping)));
 			}
 		}
@@ -476,18 +500,21 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 		}
 
 		public void register(T mapping, Object handler, Method method) {
+			// 支持并发访问，用读写锁控制全局变量
 			this.readWriteLock.writeLock().lock();
 			try {
+				// 将handler和method封装到HandlerMethod中
 				HandlerMethod handlerMethod = createHandlerMethod(handler, method);
+				// 断言HandlerMethod的唯一性
 				assertUniqueMethodMapping(handlerMethod, mapping);
-
+				// 放入缓存
 				this.mappingLookup.put(mapping, handlerMethod);
-
+				// 初始化CORS配置
 				CorsConfiguration corsConfig = initCorsConfiguration(handler, method, mapping);
 				if (corsConfig != null) {
 					this.corsLookup.put(handlerMethod, corsConfig);
 				}
-
+				// 放入缓存
 				this.registry.put(mapping, new MappingRegistration<>(mapping, handlerMethod));
 			}
 			finally {
