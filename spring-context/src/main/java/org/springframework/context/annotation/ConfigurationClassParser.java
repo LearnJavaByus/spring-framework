@@ -217,31 +217,36 @@ class ConfigurationClassParser {
 
 
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
+		/* 判断是否需要跳过 */
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
 
 		//获取我们的配置类对象
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
+		// 是否已经配置过
 		if (existingClass != null) {
-			//传入的配置类是通过其他配置类的Import导入进来的
+			//传入的配置类是通过其他配置类的Import导入进来的 // 是否已经注册
 			if (configClass.isImported()) {
 				if (existingClass.isImported()) {
 					//需要合并配置
 					existingClass.mergeImportedBy(configClass);
 				}
 				// Otherwise ignore new imported config class; existing non-imported class overrides it.
+				// 注册过无需再次注册
 				return;
 			}
 			else {
 				// Explicit bean definition found, probably replacing an import.
 				// Let's remove the old one and go with the new one.
+				// 这里代表有重复的BeanDefinition，将已经存在的去掉重新注册
 				this.configurationClasses.remove(configClass);
 				this.knownSuperclasses.values().removeIf(configClass::equals);
 			}
 		}
 
 		// Recursively process the configuration class and its superclass hierarchy.
+		// 递归处理当前ConfigurationClass和它的父类
 		SourceClass sourceClass = asSourceClass(configClass);
 		//真正的进行配置类的解析
 		do {
@@ -267,6 +272,7 @@ class ConfigurationClassParser {
 
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
 			// Recursively process any member (nested) classes first
+			// 递归处理成员内部类
 			processMemberClasses(configClass, sourceClass);
 		}
 
@@ -276,6 +282,7 @@ class ConfigurationClassParser {
 				sourceClass.getMetadata(), PropertySources.class,
 				org.springframework.context.annotation.PropertySource.class)) {
 			if (this.environment instanceof ConfigurableEnvironment) {
+				/* 处理属性 */
 				processPropertySource(propertySource);
 			}
 			else {
@@ -289,6 +296,7 @@ class ConfigurationClassParser {
 		//从我们的配置类上解析@ComponentScans的对象集合属性
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
+		// 同样的@Conditional注解条件判断
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			//循环解析（我们解析出来的AnnotationAttributes）
@@ -322,9 +330,12 @@ class ConfigurationClassParser {
 		AnnotationAttributes importResource =
 				AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
 		if (importResource != null) {
+			// locations属性
 			String[] resources = importResource.getStringArray("locations");
+			// reader属性
 			Class<? extends BeanDefinitionReader> readerClass = importResource.getClass("reader");
 			for (String resource : resources) {
+				// 处理路径中的特殊符号
 				String resolvedResource = this.environment.resolveRequiredPlaceholders(resource);
 				configClass.addImportedResource(resolvedResource, readerClass);
 			}
@@ -345,10 +356,13 @@ class ConfigurationClassParser {
 		//处理配置类的父类的
 		if (sourceClass.getMetadata().hasSuperClass()) {
 			String superclass = sourceClass.getMetadata().getSuperClassName();
+			// java包的父类和已经处理过的父类不处理
 			if (superclass != null && !superclass.startsWith("java") &&
 					!this.knownSuperclasses.containsKey(superclass)) {
+				// 标记父类已经处理过
 				this.knownSuperclasses.put(superclass, configClass);
 				// Superclass found, return its annotation metadata and recurse
+				// 返回父类的SourceClass再次进行递归处理
 				return sourceClass.getSuperClass();
 			}
 		}
@@ -450,26 +464,33 @@ class ConfigurationClassParser {
 	 * @throws IOException if loading a property source failed
 	 */
 	private void processPropertySource(AnnotationAttributes propertySource) throws IOException {
+		// name属性
 		String name = propertySource.getString("name");
 		if (!StringUtils.hasLength(name)) {
 			name = null;
 		}
+		// encoding属性
 		String encoding = propertySource.getString("encoding");
 		if (!StringUtils.hasLength(encoding)) {
 			encoding = null;
 		}
+		// value属性
 		String[] locations = propertySource.getStringArray("value");
 		Assert.isTrue(locations.length > 0, "At least one @PropertySource(value) location is required");
+		// ignoreResourceNotFound属性
 		boolean ignoreResourceNotFound = propertySource.getBoolean("ignoreResourceNotFound");
-
+		// factory属性
 		Class<? extends PropertySourceFactory> factoryClass = propertySource.getClass("factory");
 		PropertySourceFactory factory = (factoryClass == PropertySourceFactory.class ?
 				DEFAULT_PROPERTY_SOURCE_FACTORY : BeanUtils.instantiateClass(factoryClass));
 
 		for (String location : locations) {
 			try {
+				// 处理路径中的特殊字符
 				String resolvedLocation = this.environment.resolveRequiredPlaceholders(location);
+				// 根据路径获取资源
 				Resource resource = this.resourceLoader.getResource(resolvedLocation);
+				// 添加属性到Environment环境对象中的propertySources中，
 				addPropertySource(factory.createPropertySource(name, new EncodedResource(resource, encoding)));
 			}
 			catch (IllegalArgumentException | FileNotFoundException | UnknownHostException ex) {
@@ -566,11 +587,12 @@ class ConfigurationClassParser {
 		if (importCandidates.isEmpty()) {
 			return;
 		}
-
+		// 栈中链式导入的检查，检查正在导入的class是否有冲突
 		if (checkForCircularImports && isChainedImportOnStack(configClass)) {
 			this.problemReporter.error(new CircularImportProblem(configClass, this.importStack));
 		}
 		else {
+			// 入栈标识正在解析中
 			this.importStack.push(configClass);
 			try {
 				//获取我们Import导入进来的所有组件
@@ -592,6 +614,7 @@ class ConfigurationClassParser {
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							//反之SelectImport导入进来的又是Import进来的 所以递归解析
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);
+							// 递归解析
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
 					}
@@ -626,6 +649,7 @@ class ConfigurationClassParser {
 						configClass.getMetadata().getClassName() + "]", ex);
 			}
 			finally {
+				// 出栈表示已经解析完
 				this.importStack.pop();
 			}
 		}
