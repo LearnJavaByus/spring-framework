@@ -94,13 +94,16 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 * @see org.springframework.beans.factory.FactoryBean#getObject()
 	 */
 	protected Object getObjectFromFactoryBean(FactoryBean<?> factory, String beanName, boolean shouldPostProcess) {
-		if (factory.isSingleton() && containsSingleton(beanName)) {
+		if (factory.isSingleton() && containsSingleton(beanName)) { // 单例
 			synchronized (getSingletonMutex()) {
+				// 尝试从缓存中获取FactoryBean
 				Object object = this.factoryBeanObjectCache.get(beanName);
 				if (object == null) {
+					/* 从FactoryBean中加载bean */
 					object = doGetObjectFromFactoryBean(factory, beanName);
 					// Only post-process and store if not put there already during getObject() call above
 					// (e.g. because of circular reference processing triggered by custom getBean calls)
+					// 这里再次尝试从缓存中获取是因为自定义的bean调用处理循环依赖时可能已经放入缓存
 					Object alreadyThere = this.factoryBeanObjectCache.get(beanName);
 					if (alreadyThere != null) {
 						object = alreadyThere;
@@ -113,6 +116,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 							}
 							beforeSingletonCreation(beanName);
 							try {
+								/* BeanPostProcessor的调用 */
 								object = postProcessObjectFromFactoryBean(object, beanName);
 							}
 							catch (Throwable ex) {
@@ -131,10 +135,12 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 				return object;
 			}
 		}
-		else {
+		else { // 非单例
+			/* 从FactoryBean中加载bean */
 			Object object = doGetObjectFromFactoryBean(factory, beanName);
 			if (shouldPostProcess) {
 				try {
+					/* BeanPostProcessor的调用 */
 					object = postProcessObjectFromFactoryBean(object, beanName);
 				}
 				catch (Throwable ex) {
@@ -161,6 +167,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 			if (System.getSecurityManager() != null) {
 				AccessControlContext acc = getAccessControlContext();
 				try {
+					// 调用getObject方法获取bean
 					object = AccessController.doPrivileged((PrivilegedExceptionAction<Object>) factory::getObject, acc);
 				}
 				catch (PrivilegedActionException pae) {
@@ -168,6 +175,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 				}
 			}
 			else {
+				// 调用getObject方法获取bean
 				object = factory.getObject();
 			}
 		}

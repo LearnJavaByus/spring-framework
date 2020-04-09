@@ -372,11 +372,14 @@ class ConstructorResolver {
 	 * @param explicitArgs argument values passed in programmatically via the getBean
 	 * method, or {@code null} if none (-> use constructor argument values from bean definition)
 	 * @return a BeanWrapper for the new instance
+	 *
+	 * 构造解释
 	 */
 	public BeanWrapper instantiateUsingFactoryMethod(
 			String beanName, RootBeanDefinition mbd, @Nullable Object[] explicitArgs) {
 
 		BeanWrapperImpl bw = new BeanWrapperImpl();
+		// 初始化BeanWrapper，主要为其织入PropertyEditor属性编辑器
 		this.beanFactory.initBeanWrapper(bw);
 
 		Object factoryBean;
@@ -412,6 +415,7 @@ class ConstructorResolver {
 		Object[] argsToUse = null;
 
 		if (explicitArgs != null) {
+			// 如果传入了参数列表，则使用传入的参数进行匹配
 			argsToUse = explicitArgs;
 		}
 		else {
@@ -419,14 +423,16 @@ class ConstructorResolver {
 			synchronized (mbd.constructorArgumentLock) {
 				factoryMethodToUse = (Method) mbd.resolvedConstructorOrFactoryMethod;
 				if (factoryMethodToUse != null && mbd.constructorArgumentsResolved) {
-					// Found a cached factory method...
+					// Found a cached factory method... // 尝试从缓存中获取
 					argsToUse = mbd.resolvedConstructorArguments;
 					if (argsToUse == null) {
+						// 用户配置的构造方法的参数
 						argsToResolve = mbd.preparedConstructorArguments;
 					}
 				}
 			}
-			if (argsToResolve != null) {
+			if (argsToResolve != null) { // 缓存中存在
+				// 解析参数列表，包括类型转换和应用用户自定义的TypeConverter类型转换器等
 				argsToUse = resolvePreparedArguments(beanName, mbd, bw, factoryMethodToUse, argsToResolve, true);
 			}
 		}
@@ -459,6 +465,7 @@ class ConstructorResolver {
 			}
 
 			Method[] candidates = candidateList.toArray(new Method[0]);
+			// 排序，public优先，参数数量降序
 			AutowireUtils.sortFactoryMethods(candidates);
 
 			ConstructorArgumentValues resolvedValues = null;
@@ -467,15 +474,18 @@ class ConstructorResolver {
 			Set<Method> ambiguousFactoryMethods = null;
 
 			int minNrOfArgs;
-			if (explicitArgs != null) {
+			if (explicitArgs != null) { // 传入了参数列表
 				minNrOfArgs = explicitArgs.length;
 			}
 			else {
 				// We don't have arguments passed in programmatically, so we need to resolve the
 				// arguments specified in the constructor arguments held in the bean definition.
 				if (mbd.hasConstructorArgumentValues()) {
+					// 没有传入获取配置文件中配置的构造方法的参数列表（解析constructor-arg标签时为BeanDefinition设置的属性）
 					ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
+					// 用于保存解析后的构造参数的值
 					resolvedValues = new ConstructorArgumentValues();
+					// 解析参数返回个数
 					minNrOfArgs = resolveConstructorArguments(beanName, mbd, bw, cargs, resolvedValues);
 				}
 				else {
