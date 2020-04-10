@@ -78,6 +78,13 @@ public class InjectionMetadata {
 		this.checkedElements = checkedElements;
 	}
 
+	/**
+	 * 这里的注入有field属性的注入和method方法的注入，我们以属性的注入为例，method方法的注入也就是调用set方法为属性赋值，原理相似
+	 * @param target
+	 * @param beanName
+	 * @param pvs
+	 * @throws Throwable
+	 */
 	public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
 		Collection<InjectedElement> checkedElements = this.checkedElements;
 		Collection<InjectedElement> elementsToIterate =
@@ -87,6 +94,7 @@ public class InjectionMetadata {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Processing injected element of bean '" + beanName + "': " + element);
 				}
+				/* 注入 */
 				element.inject(target, beanName, pvs);
 			}
 		}
@@ -177,6 +185,7 @@ public class InjectionMetadata {
 			if (this.isField) {
 				Field field = (Field) this.member;
 				ReflectionUtils.makeAccessible(field);
+				// 反射为属性赋值
 				field.set(target, getResourceToInject(target, requestingBeanName));
 			}
 			else {

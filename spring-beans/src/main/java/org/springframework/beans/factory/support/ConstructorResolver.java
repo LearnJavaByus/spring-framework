@@ -574,7 +574,7 @@ class ConstructorResolver {
 						argTypes.add(arg != null ? arg.getClass().getSimpleName() : "null");
 					}
 				}
-				else if (resolvedValues != null) {
+				else if (resolvedValues != null) {// 如果配置的参数不为空
 					Set<ValueHolder> valueHolders = new LinkedHashSet<>(resolvedValues.getArgumentCount());
 					valueHolders.addAll(resolvedValues.getIndexedArgumentValues().values());
 					valueHolders.addAll(resolvedValues.getGenericArgumentValues());
@@ -702,7 +702,7 @@ class ConstructorResolver {
 			String beanName, RootBeanDefinition mbd, @Nullable ConstructorArgumentValues resolvedValues,
 			BeanWrapper bw, Class<?>[] paramTypes, @Nullable String[] paramNames, Executable executable,
 			boolean autowiring, boolean fallback) throws UnsatisfiedDependencyException {
-
+		// 如果有自定义类型转换器，则应用
 		TypeConverter customConverter = this.beanFactory.getCustomTypeConverter();
 		TypeConverter converter = (customConverter != null ? customConverter : bw);
 
@@ -716,10 +716,12 @@ class ConstructorResolver {
 			// Try to find matching constructor argument value, either indexed or generic.
 			ConstructorArgumentValues.ValueHolder valueHolder = null;
 			if (resolvedValues != null) {
+				// 首先尝试通过index获取value，没有再通过类型匹配的方式获取value
 				valueHolder = resolvedValues.getArgumentValue(paramIndex, paramType, paramName, usedValueHolders);
 				// If we couldn't find a direct match and are not supposed to autowire,
 				// let's try the next generic, untyped argument value as fallback:
 				// it could match after type conversion (for example, String -> int).
+				// 如果没有获取到value并且不支持自动注入的方式，尝试通过无类型参数值匹配获取value，这里可以匹配类型转换后的参数，例如"1" -> 1，String -> int
 				if (valueHolder == null && (!autowiring || paramTypes.length == resolvedValues.getArgumentCount())) {
 					valueHolder = resolvedValues.getGenericArgumentValue(null, null, usedValueHolders);
 				}
@@ -731,6 +733,7 @@ class ConstructorResolver {
 				Object originalValue = valueHolder.getValue();
 				Object convertedValue;
 				if (valueHolder.isConverted()) {
+					// 如果没有转换过，则要需要判断是否需要通过类型装换器装换类型
 					convertedValue = valueHolder.getConvertedValue();
 					args.preparedArguments[paramIndex] = convertedValue;
 				}
@@ -757,6 +760,7 @@ class ConstructorResolver {
 				args.rawArguments[paramIndex] = originalValue;
 			}
 			else {
+				// 到这里如果不支持自动装配，就没有别的办法了，抛出异常
 				MethodParameter methodParam = MethodParameter.forExecutable(executable, paramIndex);
 				// No explicit match found: we're either supposed to autowire or
 				// have to fail creating an argument array for the given constructor.
@@ -767,6 +771,7 @@ class ConstructorResolver {
 							"] - did you specify the correct bean references as arguments?");
 				}
 				try {
+					// 参数自动装配的处理
 					Object autowiredArgument = resolveAutowiredArgument(
 							methodParam, beanName, autowiredBeanNames, converter, fallback);
 					args.rawArguments[paramIndex] = autowiredArgument;
@@ -782,6 +787,7 @@ class ConstructorResolver {
 		}
 
 		for (String autowiredBeanName : autowiredBeanNames) {
+			// 注册自动装配的bean的依赖关系
 			this.beanFactory.registerDependentBean(autowiredBeanName, beanName);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Autowiring by type from bean name '" + beanName +

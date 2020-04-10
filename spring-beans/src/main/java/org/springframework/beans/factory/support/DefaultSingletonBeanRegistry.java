@@ -150,6 +150,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * resolve circular references.
 	 * @param beanName the name of the bean
 	 * @param singletonFactory the factory for the singleton object
+	 *  通过提前暴露ObjectFactory放入缓存中，这样其他bean依赖当前bean时，从缓存中得到的只是刚刚初始化完但还没有填充任何属性的bean的引用，
+	 *  当前bean创建完成之后依赖它的bean自然能够通过引用获取到当前bean，这样就解决了循环依赖
 	 */
 	protected void addSingletonFactory(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(singletonFactory, "Singleton factory must not be null");

@@ -74,6 +74,7 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 
 	@Override
 	protected Object instantiateWithMethodInjection(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
+		/* CGLIB动态代理 */
 		return instantiateWithMethodInjection(bd, beanName, owner, null);
 	}
 
@@ -133,8 +134,8 @@ public class CglibSubclassingInstantiationStrategy extends SimpleInstantiationSt
 			// enhanced class (via the Enhancer) in order to avoid memory leaks.
 			Factory factory = (Factory) instance;
 			factory.setCallbacks(new Callback[] {NoOp.INSTANCE,
-					new LookupOverrideMethodInterceptor(this.beanDefinition, this.owner),
-					new ReplaceOverrideMethodInterceptor(this.beanDefinition, this.owner)});
+					new LookupOverrideMethodInterceptor(this.beanDefinition, this.owner),// lookup-method处理
+					new ReplaceOverrideMethodInterceptor(this.beanDefinition, this.owner)});// replace-method处理
 			return instance;
 		}
 
