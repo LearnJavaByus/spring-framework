@@ -48,6 +48,7 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 
 	@Override
 	public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
+		// 判断使用哪种代理，optimize用来控制通过CGLIB创建的代理是否使用激进的优化策略
 		if (config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config)) {
 			Class<?> targetClass = config.getTargetClass();
 			if (targetClass == null) {
@@ -68,6 +69,7 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 	 * Determine whether the supplied {@link AdvisedSupport} has only the
 	 * {@link org.springframework.aop.SpringProxy} interface specified
 	 * (or no proxy interfaces specified at all).
+	 * 	 判断目标类是否没有用户自定义的代理接口
 	 */
 	private boolean hasNoUserSuppliedProxyInterfaces(AdvisedSupport config) {
 		Class<?>[] ifcs = config.getProxiedInterfaces();
