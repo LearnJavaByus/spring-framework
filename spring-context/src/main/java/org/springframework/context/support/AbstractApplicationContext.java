@@ -1057,6 +1057,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				@Override
 				public void run() {
 					synchronized (startupShutdownMonitor) {
+						/* 关闭容器 */
 						doClose();
 					}
 				}
@@ -1087,6 +1088,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	@Override
 	public void close() {
 		synchronized (this.startupShutdownMonitor) {
+			/* 关闭容器 */
 			doClose();
 			// If we registered a JVM shutdown hook, we don't need it anymore now:
 			// We've already explicitly closed the context.
@@ -1112,15 +1114,16 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void doClose() {
 		// Check whether an actual close attempt is necessary...
+		// 判断active激活标记（在初始化上下文时被设置为true用于标记激活状态）并且将closed标记设置为true
 		if (this.active.get() && this.closed.compareAndSet(false, true)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug("Closing " + this);
 			}
-
+			// 卸载注册的JMX的MBean
 			LiveBeansView.unregisterApplicationContext(this);
 
 			try {
-				// Publish shutdown event.
+				// Publish shutdown event. // 发布容器关闭事件
 				publishEvent(new ContextClosedEvent(this));
 			}
 			catch (Throwable ex) {
@@ -1130,6 +1133,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			// Stop all Lifecycle beans, to avoid delays during individual destruction.
 			if (this.lifecycleProcessor != null) {
 				try {
+					// 调用实现了Lifecycle的bean的stop方法，关于Lifecycle，我们在标签解析的文章中分析过
 					this.lifecycleProcessor.onClose();
 				}
 				catch (Throwable ex) {
@@ -1137,13 +1141,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				}
 			}
 
-			// Destroy all cached singletons in the context's BeanFactory.
+			// Destroy all cached singletons in the context's BeanFactory./* 销毁bean */
 			destroyBeans();
 
 			// Close the state of this context itself.
+			// 关闭BeanFactory，将BeanFactory序列化id和本身置为null
 			closeBeanFactory();
 
 			// Let subclasses do some final clean-up if they wish...
+			// 子类扩展
 			onClose();
 
 			// Reset local application listeners to pre-refresh state.
@@ -1152,7 +1158,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				this.applicationListeners.addAll(this.earlyApplicationListeners);
 			}
 
-			// Switch to inactive.
+			// Switch to inactive.// 将激活标记置为false
 			this.active.set(false);
 		}
 	}
@@ -1169,6 +1175,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see org.springframework.beans.factory.config.ConfigurableBeanFactory#destroySingletons()
 	 */
 	protected void destroyBeans() {
+		// 销毁单例bean
 		getBeanFactory().destroySingletons();
 	}
 

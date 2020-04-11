@@ -1037,8 +1037,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 	@Override
 	public void destroySingletons() {
+		/* 调用父类的销毁方法销毁单例bean */
 		super.destroySingletons();
+		// 清空手工注册的beanName的缓存
 		updateManualSingletonNames(Set::clear, set -> !set.isEmpty());
+		// 清空类型-->beanName的映射缓存
 		clearByTypeCache();
 	}
 
