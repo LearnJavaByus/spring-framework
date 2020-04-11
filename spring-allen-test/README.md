@@ -21,8 +21,26 @@
         AopNamespaceHandler 的init()方法new AspectJAutoProxyBeanDefinitionParser()的parse()方法
         bean的实例化postProcessAfterInitialization方法
         
+### 2、AOP的代理创建
+  主要内容是AOP代理创建的过程，包括什么时候使用CGLIB代理，什么时候使用JDK动态代理
+      AbstractAutoProxyCreator的 createProxy()方法
+       
 
-
+### 3、aop的执行
+  主要内容是AOP的执行过程，包括前置增强、后置增强等流程的分析
+  
+    JdkDynamicAopProxy的invoke()方法
+    适配器类型:
+    MethodBeforeAdviceAdapter 对应@Before注解创建的advice的适配器
+    AfterReturningAdviceAdapter  对应@AfterReturning注解创建的advice的适配器
+    ThrowsAdviceAdapter  对应@AfterThrowing注解创建的advice的适配器
+    MethodInterecptor  对应@After注解创建的advice的适配器
+    IntroductionInterecptor  对应@DeclareParents注解创建的advice的适配器
+    
+    此处对MethodBeforeAdviceAdapter 的getInterceptor()进行分析
+    
+    CglibAopProxy 的getProxy()方法进行分析
+    
 ## spring源码事务分析过程
 ### 1、tx:annotation-driven标签解析过程，TxNamespaceHandler 的init()方法，侧重看对事务标签的解析过程
    
