@@ -63,6 +63,8 @@ public class BeanFactoryAdvisorRetrievalHelper {
 	 * ignoring FactoryBeans and excluding beans that are currently in creation.
 	 * @return the list of {@link org.springframework.aop.Advisor} beans
 	 * @see #isEligibleBean
+	 *
+	 * 先找出所有对应Advisor的类的beanName，再通过beanFactory.getBean方法获取这些bean并返回，这里就是通过父类获取其他aop配置信息
 	 */
 	public List<Advisor> findAdvisorBeans() {
 		// Determine list of advisor bean names, if not cached already.

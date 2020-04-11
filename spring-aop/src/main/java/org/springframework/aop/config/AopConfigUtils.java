@@ -96,7 +96,7 @@ public abstract class AopConfigUtils {
 	@Nullable
 	public static BeanDefinition registerAspectJAnnotationAutoProxyCreatorIfNecessary(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
-
+		/* 注册AspectJAnnotationAutoProxyCreator */
 		return registerOrEscalateApcAsRequired(AnnotationAwareAspectJAutoProxyCreator.class, registry, source);
 	}
 
@@ -119,16 +119,21 @@ public abstract class AopConfigUtils {
 			Class<?> cls, BeanDefinitionRegistry registry, @Nullable Object source) {
 
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
-
+		// 如果已经存在代理创建器
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
+			// 判断已存在的代理创建器和本次要注册的代理创建器是否是相同的
 			if (!cls.getName().equals(apcDefinition.getBeanClassName())) {
+				/* 获取已经存在的代理创建器的优先级 */
 				int currentPriority = findPriorityForClass(apcDefinition.getBeanClassName());
+				/* 获取本次要创建的代理创建器的优先级 */
 				int requiredPriority = findPriorityForClass(cls);
+				// 判断优先级，使用优先级高的代理创建器
 				if (currentPriority < requiredPriority) {
 					apcDefinition.setBeanClassName(cls.getName());
 				}
 			}
+			// 如果是相同的直接返回无需再次注册
 			return null;
 		}
 
@@ -136,11 +141,13 @@ public abstract class AopConfigUtils {
 		beanDefinition.setSource(source);
 		beanDefinition.getPropertyValues().add("order", Ordered.HIGHEST_PRECEDENCE);
 		beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+		// 注册代理创建器
 		registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition);
 		return beanDefinition;
 	}
 
 	private static int findPriorityForClass(Class<?> clazz) {
+		//根据类在APC_PRIORITY_LIST中的索引值来判断,索引值越小的优先级越高
 		return APC_PRIORITY_LIST.indexOf(clazz);
 	}
 

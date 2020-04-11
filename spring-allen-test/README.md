@@ -13,7 +13,16 @@
    主要内容是bean的销毁流程，包括DisposableBean的调用过程
    
       AbstractApplicationContext 的registerShutdownHook()进行研究
-   
+
+## AOP 源码分析过程
+### 1、aop:aspectj-autoproxy标签解析
+   主要内容是介绍<aop:aspectj-autoproxy>标签的解析过程，包括如何寻找advice，如何匹配advice等
+    
+        AopNamespaceHandler 的init()方法new AspectJAutoProxyBeanDefinitionParser()的parse()方法
+        bean的实例化postProcessAfterInitialization方法
+        
+
+
 ## spring源码事务分析过程
 ### 1、tx:annotation-driven标签解析过程，TxNamespaceHandler 的init()方法，侧重看对事务标签的解析过程
    

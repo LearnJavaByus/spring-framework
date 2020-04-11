@@ -89,9 +89,11 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 				if (aspectNames == null) {
 					List<Advisor> advisors = new ArrayList<>();
 					aspectNames = new ArrayList<>();
+					// 获取所有beanName
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
 					for (String beanName : beanNames) {
+						/* 判断是否满足子标签<aop:include/>的配置条件 */
 						if (!isEligibleBean(beanName)) {
 							continue;
 						}
@@ -101,13 +103,17 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						if (beanType == null) {
 							continue;
 						}
+						/* 判断是否存在@Aspect注解 */
 						if (this.advisorFactory.isAspect(beanType)) {
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
+							// 单例
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+								/* 解析注解的配置 */
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
+								// 放入缓存中
 								if (this.beanFactory.isSingleton(beanName)) {
 									this.advisorsCache.put(beanName, classAdvisors);
 								}
@@ -117,7 +123,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 								advisors.addAll(classAdvisors);
 							}
 							else {
-								// Per target or per this.
+								// Per target or per this.// 原型
 								if (this.beanFactory.isSingleton(beanName)) {
 									throw new IllegalArgumentException("Bean with name '" + beanName +
 											"' is a singleton, but aspect instantiation model is not singleton");
