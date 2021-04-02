@@ -120,21 +120,28 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	// 该处理器支持解析的注解们~~~（这里长度设置为4）
+	// 默认支持的是3个（当然你可以自己添加自定义的依赖注入的注解   这点非常强大）
 	private final Set<Class<? extends Annotation>> autowiredAnnotationTypes = new LinkedHashSet<>(4);
-
+	// @Autowired(required = false)这个注解的属性值名称
 	private String requiredParameterName = "required";
-
+	// 这个值一般请不要改变（若改成false，效果required = false的作用是相反的了）
 	private boolean requiredParameterValue = true;
 
 	private int order = Ordered.LOWEST_PRECEDENCE - 2;
 
 	@Nullable
 	private ConfigurableListableBeanFactory beanFactory;
-
+	// 对@Lookup方法的支持  本文不讨论
 	private final Set<String> lookupMethodsChecked = Collections.newSetFromMap(new ConcurrentHashMap<>(256));
-
+	// 构造函数注入，本文也不讨论
 	private final Map<Class<?>, Constructor<?>[]> candidateConstructorsCache = new ConcurrentHashMap<>(256);
 
+	// 方法注入、字段filed注入  本文的重中之重
+	// 此处InjectionMetadata这个类非常重要，到了此处@Autowired注解含义已经没有了，完全被准备成这个元数据了
+	//  所以方便我们自定义注解的支持~~~优秀
+	// InjectionMetadata持有targetClass、Collection<InjectedElement> injectedElements等两个重要属性
+	// 其中InjectedElement这个抽象类最重要的两个实现为：AutowiredFieldElement和AutowiredMethodElement
 	private final Map<String, InjectionMetadata> injectionMetadataCache = new ConcurrentHashMap<>(256);
 
 
@@ -143,12 +150,19 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 	 * standard {@link Autowired @Autowired} annotation.
 	 * <p>Also supports JSR-330's {@link javax.inject.Inject @Inject} annotation,
 	 * if available.
+	 *
+	 * // 这是它唯一构造函数  默认支持下面三种租借（当然@Inject需要额外导包）
+	 * 	// 请注意：此处@Value注解也是被依赖注入解析的~~~~~~~~
+	 * 	// 当然如果你需要支持到你的自定义注解，你还可以调用下面的set方法添加。
 	 */
 	@SuppressWarnings("unchecked")
 	public AutowiredAnnotationBeanPostProcessor() {
+		//后置处理器将处理@Autowire注解
 		this.autowiredAnnotationTypes.add(Autowired.class);
+		//后置处理器将处理@Value注解
 		this.autowiredAnnotationTypes.add(Value.class);
 		try {
+			//后置处理器将处理javax.inject.Inject JSR-330注解
 			this.autowiredAnnotationTypes.add((Class<? extends Annotation>)
 					ClassUtils.forName("javax.inject.Inject", AutowiredAnnotationBeanPostProcessor.class.getClassLoader()));
 			logger.trace("JSR-330 'javax.inject.Inject' annotation found and supported for autowiring");
@@ -167,6 +181,10 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 	 * <p>This setter property exists so that developers can provide their own
 	 * (non-Spring-specific) annotation type to indicate that a member is supposed
 	 * to be autowired.
+	 *
+	 * 这两个setAutowiredAnnotationType是用于实现自定义依赖注入注解类型，
+	 * 首先它会把autowiredAnnotationTypes里面的元素全部clear,
+	 * 然后加入自定义的依赖注入注解类型，所以我们要注意在实现自定义注解注入时，这里会先把默认的注解类型清除
 	 */
 	public void setAutowiredAnnotationType(Class<? extends Annotation> autowiredAnnotationType) {
 		Assert.notNull(autowiredAnnotationType, "'autowiredAnnotationType' must not be null");
@@ -225,7 +243,14 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
 	}
 
-
+	/**
+	 *  1、解析@Autowired等注解然后转换
+	 *  2、把注解信息转换为InjectionMetadata然后缓存到上面的injectionMetadataCache里面
+	 *
+	 * @param beanDefinition
+	 * @param beanType
+	 * @param beanName
+	 */
 	@Override
 	public void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, beanType, null);
@@ -372,9 +397,11 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 	@Override
 	public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) {
 		/* 获取注解元数据 */
+		//获取指定类中autowire相关注解的元信息
+		// 从缓存中取出这个bean对应的依赖注入的元信息
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
-			/* 注入 */
+			/* 注入 *///对Bean的属性进行自动注入
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (BeanCreationException ex) {
@@ -415,22 +442,36 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		}
 	}
 
+	/**
+	 *
+	 // 方法名为查找到该bean的依赖注入元信息，内部只要查找到了就会加入到缓存内，下次没必要再重复查找了~
+	 // 它是一个模版方法，真正做事的方法是：buildAutowiringMetadata
+	 // 它复杂把标注有@Autowired注解的属性转换为Metadata元数据信息  从而消除注解的定义
+	 // 此处查找包括了字段依赖注入和方法依赖注入~~~
+	 //获取给定类的autowire相关注解元信息
 
+	 * @param beanName
+	 * @param clazz
+	 * @param pvs
+	 * @return
+	 */
 	private InjectionMetadata findAutowiringMetadata(String beanName, Class<?> clazz, @Nullable PropertyValues pvs) {
 		// Fall back to class name as cache key, for backwards compatibility with custom callers.
 		String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
 		// Quick check on the concurrent map first, with minimal locking.
-		// 尝试从缓存中获取
+		// 尝试从缓存中获取 //首先从容器中查找是否有给定类的autowire相关注解元信息
 		InjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
 		if (InjectionMetadata.needsRefresh(metadata, clazz)) {
 			synchronized (this.injectionMetadataCache) {
 				metadata = this.injectionMetadataCache.get(cacheKey);
 				if (InjectionMetadata.needsRefresh(metadata, clazz)) {
 					if (metadata != null) {
+						//解析给定类autowire相关注解元信息
 						metadata.clear(pvs);
 					}
 					/* 构建自动装配元数据 */
 					metadata = buildAutowiringMetadata(clazz);
+					//将得到的给定类autowire相关注解元信息存储在容器缓存中
 					this.injectionMetadataCache.put(cacheKey, metadata);
 				}
 			}
@@ -438,13 +479,26 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		return metadata;
 	}
 
+	/**
+	 * // 这里我认为是整个依赖注入前期工作的精髓所在，简单粗暴的可以理解为：
+	 * 	 // 它把以依赖注入都转换为InjectionMetadata元信息，待后续使用
+	 * 	// 这里会处理字段注入、方法注入~~~
+	 * 	// 注意：Autowired使用在static字段/方法上、0个入参的方法上（不会报错 只是无效）
+	 * 	// 显然方法的访问级别、是否final都是可以正常被注入进来的~~~
+	 * 	//解析给定类autowire相关注解元信息
+	 * @param clazz
+	 * @return
+	 */
 	private InjectionMetadata buildAutowiringMetadata(final Class<?> clazz) {
+		//创建一个存放注解元信息的集合
 		List<InjectionMetadata.InjectedElement> elements = new ArrayList<>();
 		Class<?> targetClass = clazz;
 
+		//递归遍历当前类及其所有基类，解析全部注解元信息
 		do {
+			//创建一个存储当前正在处理类注解元信息的集合
 			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
-
+			//利用JDK反射机制获取给定类中所有的声明字段，获取字段上的注解信息
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
 				// 获取属性上的注解的配置属性，包括@Autowire和@Value注解
 				AnnotationAttributes ann = findAutowiredAnnotation(field);
@@ -456,43 +510,50 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						}
 						return;
 					}
-					// 获取required属性
+					// 获取required属性 //判断注解的required属性值是否有效
 					boolean required = determineRequiredStatus(ann);
+					//将当前字段元信息封装，添加在返回的集合中
 					currElements.add(new AutowiredFieldElement(field, required));
 				}
 			});
 			// 获取方法上的注解的配置属性，包括@Autowire和@Value注解
+			//利用JDK反射机制获取给定类中所有的声明方法，获取方法上的注解信息
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 				Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
 				if (!BridgeMethodResolver.isVisibilityBridgeMethodPair(method, bridgedMethod)) {
 					return;
 				}
+				//获取给定方法上的所有注解
 				AnnotationAttributes ann = findAutowiredAnnotation(bridgedMethod);
 				if (ann != null && method.equals(ClassUtils.getMostSpecificMethod(method, clazz))) {
-					// 不支持在static方法上使用@Autowire注解
+					// 不支持在static方法上使用@Autowire注解 //如果方法是静态的，则直接遍历下一个方法
 					if (Modifier.isStatic(method.getModifiers())) {
 						if (logger.isInfoEnabled()) {
 							logger.info("Autowired annotation is not supported on static methods: " + method);
 						}
 						return;
 					}
-					// 方法必须有参数，不然没意义
+					// 方法必须有参数，不然没意义 //如果方法的参数列表为空
 					if (method.getParameterCount() == 0) {
 						if (logger.isInfoEnabled()) {
 							logger.info("Autowired annotation should only be used on methods with parameters: " +
 									method);
 						}
 					}
-					// 获取required属性
+					// 获取required属性 //判断注解的required属性值是否有效
 					boolean required = determineRequiredStatus(ann);
+					//获取当前方法的属性描述符，即方法是可读的(readable)getter方法，还是可写的(writeable)setter方法
 					PropertyDescriptor pd = BeanUtils.findPropertyForMethod(bridgedMethod, clazz);
+					//将方法元信息封装添加到返回的元信息集合中
 					currElements.add(new AutowiredMethodElement(method, required, pd));
 				}
 			});
-
+			//将当前类的注解元信息存放到注解元信息集合中
 			elements.addAll(0, currElements);
+			//获取给定类的父类
 			targetClass = targetClass.getSuperclass();
 		}
+		//如果给定类有基类，并且基类不是Object，则递归获取其基类的元信息
 		while (targetClass != null && targetClass != Object.class);
 
 		return new InjectionMetadata(clazz, elements);
@@ -573,6 +634,8 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 	/**
 	 * Class representing injection information about an annotated field.
+	 *
+	 *  它的宿主类是AutowiredAnnotationBeanPostProcessor 高内聚低耦合
 	 */
 	private class AutowiredFieldElement extends InjectionMetadata.InjectedElement {
 
@@ -582,37 +645,53 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 		@Nullable
 		private volatile Object cachedFieldValue;
-
+		//唯一构造方法
 		public AutowiredFieldElement(Field field, boolean required) {
-			super(field, null);
+			super(field, null);// 此处显示调用父类的构造函数
 			this.required = required;
 		}
 
+		// 核心方法：字段的依赖注入
 		@Override
 		protected void inject(Object bean, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+			// 显然此处父类的member就指的是filed
 			Field field = (Field) this.member;
 			Object value;
 			if (this.cached) {
 				value = resolvedCachedArgument(beanName, this.cachedFieldValue);
 			}
 			else {
+				// 每个Field都包装成一个DependencyDescriptor
+				// 如果是Method包装成DependencyDescriptor,毕竟一个方法可以有多个入参
+				// 此处包装成它后，显然和元数据都无关了，只和Field有关了  完全隔离
 				DependencyDescriptor desc = new DependencyDescriptor(field, this.required);
 				desc.setContainingClass(bean.getClass());
 				Set<String> autowiredBeanNames = new LinkedHashSet<>(1);
 				Assert.state(beanFactory != null, "No BeanFactory available");
+				// 转换器使用的bean工厂的转换器~~~
 				TypeConverter typeConverter = beanFactory.getTypeConverter();
 				try {
+					// 获取依赖的value值的工作  最终还是委托给beanFactory.resolveDependency()去完成的~~~~
+					// 这个接口方法由AutowireCapableBeanFactory提供，它提供了从bean工厂里获取依赖值的能力~
 					value = beanFactory.resolveDependency(desc, beanName, autowiredBeanNames, typeConverter);
 				}
 				catch (BeansException ex) {
 					throw new UnsatisfiedDependencyException(null, beanName, new InjectionPoint(field), ex);
 				}
+				// 下面代码是把缓存值缓存起来  让同一个Field注入多次能提高效率
 				synchronized (this) {
 					if (!this.cached) {
+						// 可以看到value！=null并且required=true才会进行缓存的处理
+						// 按照上例 此处value值为A@2277实例
 						if (value != null || this.required) {
 							this.cachedFieldValue = desc;
+							// 这个方法是宿主类AutowiredAnnotationBeanPostProcessor的方法
+							// 简单的说就是注册到bean工厂去，比如此处b是依赖a的  所以就注册这个依赖关系进去了
+							// 参考this.beanFactory.registerDependentBean(autowiredBeanName, beanName);
 							registerDependentBeans(beanName, autowiredBeanNames);
+							// autowiredBeanNames里可能会有别名的名称~~~所以size可能大于1
 							if (autowiredBeanNames.size() == 1) {
+								// beanFactory.isTypeMatch挺重要的~~~~因为@Autowired是按照类型注入的
 								String autowiredBeanName = autowiredBeanNames.iterator().next();
 								if (beanFactory.containsBean(autowiredBeanName) &&
 										beanFactory.isTypeMatch(autowiredBeanName, field.getType())) {
@@ -628,6 +707,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 					}
 				}
 			}
+			// 不为null，就完成最终的set值  利用反射给filed属性赋值~~~~
 			if (value != null) {
 				ReflectionUtils.makeAccessible(field);
 				field.set(bean, value);
